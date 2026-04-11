@@ -60,16 +60,13 @@ export default function CorteCaja({ alCambiarVista, ventas, alResetearCaja }) {
       </div>
 
       {/* Botón Finalizar */}
-      <button 
-        onClick={() => {
-          if(window.confirm("¿Confirmas el cierre de turno? El historial se mantendrá para el administrador.")) {
-            alCambiarVista("home");
-          }
-        }}
-        className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-blue-100 flex items-center justify-center gap-3 active:scale-95 transition-all"
-      >
-        Finalizar Turno y Salir <ArrowRightCircle size={18} />
-      </button>
+     // En CorteCaja.jsx, buscá el botón de finalizar
+<button 
+  onClick={alResetearCaja} // <-- Quitale el if(confirm...) de aquí
+  className="w-full bg-blue-600 text-white py-6 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all"
+>
+  Finalizar Turno y Salir <ArrowRightCircle size={18} />
+</button>
 
       {/* Estilo para el scroll interno */}
       <style>{`

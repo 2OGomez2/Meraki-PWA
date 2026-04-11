@@ -4,6 +4,7 @@ import {
   collection, addDoc, onSnapshot, updateDoc, 
   doc, deleteDoc, query, orderBy 
 } from "firebase/firestore";
+import Swal from 'sweetalert2';
 
 import Home from './views/Home';
 import TomarOrden from './views/TomarOrden';
@@ -53,7 +54,7 @@ function App() {
   }, []);
 
   // --- 3. LÓGICA DE NEGOCIO ---
-  const guardarOrdenPendiente = async (cliente, carrito) => {
+ const guardarOrdenPendiente = async (cliente, carrito) => {
     try {
       await addDoc(collection(db, "pendientes"), {
         id: Date.now(),
@@ -62,8 +63,21 @@ function App() {
         total: carrito.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0),
         hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
+
+      // --- CAMBIO AQUÍ ---
+      Swal.fire({
+        title: '¡Orden Lista!',
+        text: `Pedido de ${cliente} guardado con éxito`,
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+        borderRadius: '20px'
+      });
+      
       setVista("home");
-    } catch (e) { alert("Error de conexión."); }
+    } catch (e) { 
+      Swal.fire('Error', 'No se pudo guardar la orden', 'error');
+    }
   };
 
   const finalizarPagoConsolidado = async (ordenOrg, itemsAPagar, esParcial) => {
@@ -104,10 +118,28 @@ function App() {
     } catch (e) { alert("Error al procesar el pago."); }
   };
 
-  const resetearCaja = () => {
-    if(window.confirm("¿Confirmas el cierre de turno? El historial se mantendrá.")) {
-      setVista("home");
-    }
+ const resetearCaja = () => {
+    Swal.fire({
+      title: '¿Cerrar Turno?',
+      text: "El administrador podrá ver los datos en el Dashboard.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#0f172a', // Slate-900
+      cancelButtonColor: '#94a3b8', // Slate-400
+      confirmButtonText: 'SÍ, CERRAR TURNO',
+      cancelButtonText: 'CANCELAR',
+      borderRadius: '25px'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        setVista("home");
+        Swal.fire({
+          title: 'Corte Realizado',
+          icon: 'success',
+          timer: 1000,
+          showConfirmButton: false
+        });
+      }
+    });
   };
 
   // --- 4. RENDERIZADO ---
