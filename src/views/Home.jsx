@@ -1,8 +1,43 @@
 import React from 'react';
-// Agregamos TrendingUp a la lista de iconos importados
 import { PlusCircle, Clock, CheckCircle, Calculator, TrendingUp } from 'lucide-react';
+import Swal from 'sweetalert2'; // Importamos SweetAlert aquí también
 
 export default function Home({ alCambiarVista, cantidadPendientes }) {
+
+  const entrarAlDashboard = () => {
+    Swal.fire({
+      title: 'Acceso Administrativo',
+      input: 'password', // Oculta el PIN
+      inputPlaceholder: 'Ingresa el PIN',
+      inputAttributes: {
+        maxlength: 4,
+        autocapitalize: 'off',
+        autocorrect: 'off',
+        inputmode: 'numeric' // Esto fuerza a que salga el teclado numérico en el cel
+      },
+      showCancelButton: true,
+      confirmButtonText: 'ENTRAR',
+      cancelButtonText: 'CANCELAR',
+      confirmButtonColor: '#0f172a', // Slate-900 para que combine
+      cancelButtonColor: '#94a3b8',
+      borderRadius: '2rem'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        if (result.value === "1234") {
+          alCambiarVista("dashboard");
+        } else {
+          Swal.fire({
+            title: 'PIN Incorrecto',
+            text: 'Solo personal autorizado, chero.',
+            icon: 'error',
+            confirmButtonColor: '#ef4444',
+            borderRadius: '2rem'
+          });
+        }
+      }
+    });
+  };
+
   return (
     <div className="grid grid-cols-2 gap-4 p-6 h-[90vh] items-center">
       
@@ -35,13 +70,9 @@ export default function Home({ alCambiarVista, cantidadPendientes }) {
         <span className="font-black text-xs uppercase tracking-widest text-center">Corte Caja</span>
       </button>
 
-      {/* Botón Dashboard Administrativo (Ocupa las 2 columnas) */}
+      {/* Botón Dashboard Administrativo */}
       <button 
-        onClick={() => {
-          const pin = prompt("Ingrese PIN de Administrador:");
-          if(pin === "1234") alCambiarVista("dashboard");
-          else alert("PIN Incorrecto, chero.");
-        }} 
+        onClick={entrarAlDashboard} 
         className="col-span-2 h-24 bg-white border-2 border-slate-100 rounded-[2rem] flex items-center justify-center gap-4 active:scale-95 transition-all"
       >
         <TrendingUp className="text-blue-600" size={24} />

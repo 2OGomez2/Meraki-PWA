@@ -1,169 +1,175 @@
 import React, { useState } from 'react';
+import { Search, Plus, Utensils, Coffee, Pizza, PlusCircle, Save } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { MENU_ESTRUCTURADO } from '../utils/menu';
-import { ChevronLeft } from 'lucide-react';
-import ItemCarrito from '../components/ItemCarrito';
-import ModalAderezos from '../components/ModalAderezos'; 
 
-export default function TomarOrden({ alCambiarVista, alGuardarOrden, alCobrarTodo }) {
-  const [cliente, setCliente] = useState("");
+export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
   const [carrito, setCarrito] = useState([]);
-  
-  // Estados para la navegación del menú
-  const [catSel, setCatSel] = useState(null); 
-  const [subSel, setSubSel] = useState(null);
-  
-  // Estado para controlar qué combo de alitas se está configurando
-  const [configurandoAlitas, setConfigurandoAlitas] = useState(null);
+  const [cliente, setCliente] = useState("");
+  const [categoriaActual, setCategoriaActual] = useState("Comida");
 
-  // Función principal para añadir productos
-  const agregarAlPedido = (p, m = null) => {
-    // --- CASO A: ES UN COMBO DE ALITAS (Abrimos el Modal) ---
-    if (p.aderezosDisponibles) {
-      setConfigurandoAlitas(p);
-    } 
-    else {
-      // --- CASO B: PRODUCTO NORMAL O CON MODIFICADORES ---
-      const d = m ? m.nombre : "Normal";
-      const pF = p.precioBase + (m ? m.precioEfecto : 0);
-      
-      // Verificamos si ya existe para sumar cantidad
-      const exIdx = carrito.findIndex(i => i.nombre === p.nombre && i.detalle === d);
-      
-      if (exIdx > -1) {
-        const nC = [...carrito];
-        nC[exIdx].cantidad += 1;
-        setCarrito(nC);
-      } else {
-        setCarrito([...carrito, { 
-          id: Math.random().toString(36).substr(2, 5), 
-          nombre: p.nombre, 
-          precioUnitario: pF, 
-          detalle: d, 
-          cantidad: 1 
-        }]);
-      }
-    }
-  };
+  // --- FUNCIÓN PARA EL RESUMEN Y EXTRAS ---
+  const mostrarResumen = () => {
+    if (!cliente) return Swal.fire("¡Ojo!", "Poné el nombre del cliente", "warning");
+    if (carrito.length === 0) return Swal.fire("Carrito vacío", "Agregá algo al pedido", "info");
 
-  // Función que recibe los datos desde el ModalAderezos
-  const finalizarConfiguracionAlitas = (precio, detalle) => {
-    setCarrito([...carrito, { 
-      id: Math.random().toString(36).substr(2, 5), 
-      nombre: configurandoAlitas.nombre, 
-      precioUnitario: precio, 
-      detalle: detalle, 
-      cantidad: 1 
-    }]);
-    setConfigurandoAlitas(null);
-  };
+    const total = carrito.reduce((s, i) => s + (i.precioUnitario * i.cantidad), 0);
 
-  return (
-    <div className="p-4 pb-48">
-      {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => alCambiarVista("home")} className="p-2 bg-white rounded-full shadow-sm">
-          <ChevronLeft size={24} />
-        </button>
-        <input 
-          value={cliente} 
-          onChange={(e) => setCliente(e.target.value)} 
-          placeholder="Mesa o Cliente..." 
-          className="flex-1 bg-white p-4 rounded-2xl border font-black text-lg outline-none shadow-sm focus:border-blue-500 transition-all" 
-        />
-      </div>
-
-      {/* Selector de Categorías (Nivel 1) */}
-      <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
-        {MENU_ESTRUCTURADO.map(c => (
-          <button 
-            key={c.categoria}
-            onClick={() => { setCatSel(c); setSubSel(null); }}
-            className={`px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest whitespace-nowrap transition-all ${catSel?.categoria === c.categoria ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-400 border'}`}
-          >
-            {c.categoria}
-          </button>
-        ))}
-      </div>
-
-      {/* Selector de Subcategorías (Nivel 2) */}
-      {catSel && (
-        <div className="flex gap-2 overflow-x-auto pb-4 mt-2">
-          {catSel.subcategorias.map(s => (
-            <button 
-              key={s.nombre}
-              onClick={() => setSubSel(s)}
-              className={`px-4 py-2 rounded-xl font-bold text-[10px] uppercase border-2 transition-all ${subSel?.nombre === s.nombre ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-slate-100 text-slate-400'}`}
-            >
-              {s.nombre}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Listado de Productos (Nivel 3) */}
-      <div className="space-y-4 mt-6">
-        {subSel && subSel.productos && subSel.productos.length > 0 ? (
-          subSel.productos.map(p => (
-            <div key={p.id} className="bg-white p-6 rounded-[2.5rem] border-2 border-slate-50 shadow-sm hover:border-blue-100 transition-all">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <p className="font-black text-slate-800 text-lg">{p.nombre}</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {p.aderezosDisponibles ? "Configuración Requerida" : "Producto individual"}
-                  </p>
-                </div>
-                <span className="bg-blue-600 text-white px-4 py-2 rounded-2xl text-sm font-black shadow-lg shadow-blue-100">
-                  ${p.precioBase.toFixed(2)}
-                </span>
-              </div>
-
-              <button 
-                onClick={() => agregarAlPedido(p)} 
-                className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] active:scale-95 transition-all"
-              >
-                {p.aderezosDisponibles ? "Configurar Combo" : "Añadir al Carrito"}
-              </button>
+    Swal.fire({
+      title: `Resumen: ${cliente}`,
+      html: `
+        <div class="text-left text-sm max-h-60 overflow-y-auto">
+          ${carrito.map(i => `
+            <div class="flex justify-between border-b py-2">
+              <span>${i.cantidad}x ${i.nombre} ${i.nota ? `<br/><small class="text-blue-600 font-bold">(${i.nota})</small>` : ''}</span>
+              <span class="font-bold">$${(i.precioUnitario * i.cantidad).toFixed(2)}</span>
             </div>
-          ))
-        ) : (
-          <div className="text-center py-20 opacity-20">
-             <p className="font-black uppercase text-xs">Selecciona una categoría arriba</p>
+          `).join('')}
+          <div class="flex justify-between mt-4 text-lg font-black text-slate-900">
+            <span>TOTAL:</span>
+            <span>$${total.toFixed(2)}</span>
           </div>
-        )}
+        </div>
+      `,
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: 'GUARDAR ORDEN',
+      denyButtonText: '+ EXTRA LIBRE',
+      cancelButtonText: 'SEGUIR PIDIENDO',
+      confirmButtonColor: '#2563eb', // Azul
+      denyButtonColor: '#059669',    // Verde
+      borderRadius: '2rem'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        alGuardarOrden(cliente, carrito);
+      } else if (result.isDenied) {
+        agregarExtraLibre();
+      }
+    });
+  };
+
+  const agregarExtraLibre = () => {
+    Swal.fire({
+      title: 'Agregar Extra Libre',
+      html: `
+        <input id="swal-input1" class="swal2-input" placeholder="Descripción (Ej: Extra Queso)">
+        <input id="swal-input2" type="number" step="0.01" class="swal2-input" placeholder="Precio $">
+      `,
+      focusConfirm: false,
+      preConfirm: () => {
+        const desc = document.getElementById('swal-input1').value;
+        const precio = document.getElementById('swal-input2').value;
+        if (!desc || !precio) return Swal.showValidationMessage('Llená ambos campos');
+        return { desc, precio: parseFloat(precio) };
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const nuevoExtra = {
+          id: Date.now(),
+          nombre: result.value.desc.toUpperCase(),
+          precioUnitario: result.value.precio,
+          cantidad: 1,
+          esExtra: true // Clave para identificarlo en cocina
+        };
+        setCarrito([...carrito, nuevoExtra]);
+        // Volvemos a mostrar el resumen para que el usuario vea el cambio
+        setTimeout(mostrarResumen, 500);
+      }
+    });
+  };
+
+  // --- RENDERIZADO ---
+  return (
+    <div className="flex flex-col h-[85vh]">
+      {/* 1. Header de Cliente */}
+      <div className="bg-white p-4 rounded-3xl shadow-sm mb-4">
+        <input 
+          type="text" 
+          placeholder="Nombre del Cliente..." 
+          className="w-full text-xl font-black border-none focus:ring-0"
+          value={cliente}
+          onChange={(e) => setCliente(e.target.value)}
+        />
       </div>
 
-      {/* Resumen del Carrito */}
-      <div className="mt-8 bg-slate-100 p-4 rounded-[2rem] space-y-2">
-        <p className="text-[10px] font-black text-slate-400 uppercase ml-4 mb-2">Pedido Actual</p>
-        {carrito.map(i => (
-          <ItemCarrito key={i.id} item={i} alEliminar={(id) => setCarrito(carrito.filter(x => x.id !== id))} />
+      {/* 2. Área de Productos (Scroll) */}
+      
+<div className="flex-1 overflow-y-auto pb-40 space-y-6">
+  {MENU_ESTRUCTURADO
+    .filter(c => c.categoria === categoriaActual)
+    .map(cat => (
+      <div key={cat.categoria} className="space-y-6">
+        {cat.subcategorias.map(sub => (
+          <div key={sub.nombre} className="space-y-3">
+            {/* Título de Subcategoría (Ej: Sodas Italianas) */}
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">
+              {sub.nombre}
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {sub.productos.map(prod => (
+                <button 
+                  key={prod.id}
+                  onClick={() => setCarrito([...carrito, {
+                    id: prod.id,
+                    nombre: prod.nombre,
+                    precioUnitario: prod.precioBase,
+                    cantidad: 1,
+                    nota: "" // Aquí podrías luego agregar los modificadores
+                  }])}
+                  className="bg-white p-4 rounded-[2rem] shadow-sm flex flex-col items-center justify-center gap-1 active:scale-95 transition-all border border-slate-100 h-28"
+                >
+                  <span className="font-bold text-[11px] text-center leading-tight text-slate-700 uppercase">
+                    {prod.nombre}
+                  </span>
+                  <span className="text-blue-600 font-black text-sm">
+                    ${prod.precioBase.toFixed(2)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
+    ))
+  }
+</div>
+      {/* 3. BARRA DE CATEGORÍAS (ABAJO) */}
+<div className="fixed bottom-24 left-2 right-2 bg-slate-900/95 backdrop-blur-md rounded-3xl p-2 flex justify-around items-center shadow-2xl border border-white/10 overflow-x-auto no-scrollbar">
+  {MENU_ESTRUCTURADO.map((cat) => (
+    <CategoryTab 
+      key={cat.categoria}
+      label={cat.categoria.split(',')[0]} // Corta nombres largos como "Papas, Dedos..."
+      activa={categoriaActual === cat.categoria} 
+      onClick={() => setCategoriaActual(cat.categoria)} 
+    />
+  ))}
+</div>
 
-      {/* Botones de Acción Global */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-white/90 backdrop-blur-md border-t flex gap-4">
-        <button 
-          onClick={() => { if(!cliente) return alert("Ingresa el nombre del cliente"); alGuardarOrden(cliente, carrito); }} 
-          className="flex-1 bg-slate-800 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all"
-        >
-          Guardar Pendiente
-        </button>
-        <button 
-          onClick={() => { if(carrito.length === 0) return alert("El carrito está vacío"); alCobrarTodo(cliente || "Mostrador", carrito); }} 
-          className="flex-1 bg-green-600 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-green-100"
-        >
-          Cobrar Todo
-        </button>
-      </div>
-
-      {/* MODAL DE ADEREZOS (Se activa solo si hay un combo seleccionado) */}
-      {configurandoAlitas && (
-        <ModalAderezos 
-          producto={configurandoAlitas}
-          alCerrar={() => setConfigurandoAlitas(null)}
-          alFinalizar={finalizarConfiguracionAlitas}
-        />
-      )}
+      {/* 4. BOTÓN FLOTANTE DE RESUMEN */}
+      <button 
+        onClick={mostrarResumen}
+        className="fixed bottom-6 right-6 left-6 bg-blue-600 text-white h-16 rounded-2xl font-black shadow-xl flex items-center justify-between px-8 animate-bounce-subtle"
+      >
+        <span className="flex items-center gap-2">
+          <Save size={20} /> REVISAR PEDIDO
+        </span>
+        <span className="bg-white/20 px-3 py-1 rounded-lg">
+          {carrito.length} items
+        </span>
+      </button>
     </div>
+  );
+}
+
+function CategoryTab({ icon, label, activa, onClick }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`flex flex-col items-center px-4 py-1 rounded-full transition-all ${activa ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
+    >
+      {icon}
+      <span className="text-[8px] font-bold uppercase mt-0.5">{label}</span>
+    </button>
   );
 }
