@@ -11,7 +11,7 @@ import { LayoutGrid, Clock, Wallet, CheckCircle, Calculator, TrendingUp } from '
 import Home from './views/Home';
 import TomarOrden from './views/TomarOrden';
 import Pendientes from './views/Pendientes';
-import Historial from './views/Historial'; 
+import Caja from './views/Caja'; 
 import CorteCaja from './views/CorteCaja';
 import Dashboard from './views/Dashboard';
 import Solventes from './views/Solventes';
@@ -40,22 +40,31 @@ function App() {
   }, []);
 
   const navegarA = (nuevaVista) => setVista(nuevaVista);
+     
+    const alGuardarOrden = async (cliente, carrito) => {
+  try {
+    if (carrito.length === 0) return;
+    const totalCalculado = carrito.reduce((sum, item) => sum + (item.precioUnitario * item.cantidad), 0);
+    
+    // Guardar en Firebase
+    await addDoc(collection(db, "pendientes"), {
+      id: Date.now(),
+      cliente: cliente.trim().toUpperCase(),
+      items: carrito,
+      total: totalCalculado,
+      hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      estado: "por_preparar"
+    });
 
-  const alGuardarOrden = async (cliente, carrito) => {
-    try {
-      const totalCalculado = carrito.reduce((sum, item) => sum + (item.precioUnitario * item.cantidad), 0);
-      await addDoc(collection(db, "pendientes"), {
-        id: Date.now(),
-        cliente: cliente.toUpperCase(),
-        items: carrito,
-        total: totalCalculado,
-        hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        estado: "por_preparar"
-      });
-      Swal.fire({ icon: 'success', title: '¡A Cocina!', timer: 1500, showConfirmButton: false });
-      setVista("home");
-    } catch (error) { console.error(error); }
-  };
+    Swal.fire({ icon: 'success', title: '¡Pedido Enviado!', timer: 1500, showConfirmButton: false });
+    setVista("pendientes"); 
+
+  } catch (error) { 
+    // ESTO ES LO IMPORTANTE:
+    console.error("ERROR REAL:", error); // Revisa la consola del navegador (F12)
+    Swal.fire("Error", `Detalle: ${error.message}`, "error");
+  }
+};
 
   const pasarACaja = async (orden) => {
     try {
@@ -86,37 +95,46 @@ function App() {
   };
 
   const realizarPagoParcial = async (ventaIdFB, itemsAPagar) => {
-    try {
-      const ventaActual = historialVentas.find(v => v.idFB === ventaIdFB);
-      const ventaRef = doc(db, "historial", ventaIdFB);
-      const montoRealAbono = itemsAPagar.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
+  try {
+    const ventaActual = historialVentas.find(v => v.idFB === ventaIdFB);
+    if (!ventaActual) return;
 
-      await addDoc(collection(db, "historial"), {
-        cliente: `${ventaActual.cliente} (ABONO)`,
-        items: itemsAPagar, 
-        totalAcumulado: montoRealAbono, 
-        pagado: true, 
-        horaFinalizacion: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        esPagoParcial: true,
-        idPadre: ventaIdFB
-      });
+    const ventaRef = doc(db, "historial", ventaIdFB);
+    const montoRealAbono = itemsAPagar.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
 
-      const itemsRestantes = ventaActual.pagos[0].items.filter(item => 
-        !itemsAPagar.some(p => p.nombre === item.nombre)
-      );
-      const esUltimo = itemsRestantes.length === 0;
-      const nuevoTotalRestante = itemsRestantes.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
+    // 1. GUARDAR EL ABONO: Aseguramos que idPadre sea EXACTAMENTE el idFB del padre real
+    await addDoc(collection(db, "historial"), {
+      id: Date.now(),
+      cliente: `${ventaActual.cliente} (ABONO)`,
+      items: itemsAPagar, 
+      totalAcumulado: montoRealAbono, 
+      pagado: true, 
+      horaFinalizacion: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      esPagoParcial: true,
+      idPadre: ventaIdFB // <-- Vinculación perfecta de FireBase ID
+    });
 
-      await updateDoc(ventaRef, {
-        "pagos.0.items": itemsRestantes,
-        totalAcumulado: nuevoTotalRestante,
-        pagado: esUltimo,
-        conteoCobros: (ventaActual.conteoCobros || 0) + 1,
-        horaFinalizacion: esUltimo ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null
-      });
-      Swal.fire("¡Cobro Realizado!", `Ticket de $${montoRealAbono.toFixed(2)}`, "success");
-    } catch (error) { console.error(error); }
-  };
+    // 2. FILTRAR ITEMS RESTANTES
+    const itemsRestantes = ventaActual.pagos[0].items.filter(item => 
+      !itemsAPagar.some(p => p.nombre === item.nombre)
+    );
+    const esUltimo = itemsRestantes.length === 0;
+    const nuevoTotalRestante = itemsRestantes.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
+
+    // 3. ACTUALIZAR EL PADRE: Mantenemos el idFB intacto y solo modificamos contenido
+    await updateDoc(ventaRef, {
+      "pagos.0.items": itemsRestantes,
+      totalAcumulado: nuevoTotalRestante,
+      pagado: esUltimo,
+      conteoCobros: (ventaActual.conteoCobros || 0) + 1,
+      horaFinalizacion: esUltimo ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null
+    });
+
+    Swal.fire("¡Cobro Realizado!", `Ticket de $${montoRealAbono.toFixed(2)}`, "success");
+  } catch (error) { 
+    console.error("Error en cobro parcial:", error); 
+  }
+};
   
   const agregarExtraAFirebase = async (ventaIdFB, nuevoExtra) => {
   try {
@@ -161,7 +179,7 @@ function App() {
       <div className="flex overflow-x-auto no-scrollbar items-center p-2 gap-2">
         <NavButton icon={<LayoutGrid size={18}/>} label="Menú" activa={vista === "home" || vista === "tomar"} onClick={() => navegarA("home")} />
         <NavButton icon={<Clock size={18}/>} label="Cocina" activa={vista === "pendientes"} onClick={() => navegarA("pendientes")} />
-        <NavButton icon={<Wallet size={18}/>} label="Caja" activa={vista === "historial"} onClick={() => navegarA("historial")} />
+        <NavButton icon={<Wallet size={18}/>} label="Caja" activa={vista === "caja"} onClick={() => navegarA("caja")} />
         <NavButton icon={<CheckCircle size={18}/>} label="Tickets" activa={vista === "solventes"} onClick={() => navegarA("solventes")} />
         <NavButton icon={<TrendingUp size={18}/>} label="Negocio" activa={vista === "dashboard"} onClick={() => navegarA("dashboard")} />
         <NavButton icon={<Calculator size={18}/>} label="Corte" activa={vista === "corte"} onClick={() => navegarA("corte")} />
@@ -183,8 +201,8 @@ function App() {
         {vista === "home" && <Home alCambiarVista={navegarA} cantidadPendientes={ordenesPendientes.length} />}
         {vista === "tomar" && <TomarOrden alCambiarVista={navegarA} alGuardarOrden={alGuardarOrden} />}
         {vista === "pendientes" && <Pendientes ordenes={ordenesPendientes} alFinalizarPago={pasarACaja} />}
-        {vista === "historial" && (
-  <Historial 
+        {vista === "caja" && (
+  <Caja 
     alCambiarVista={navegarA} 
     ventas={historialVentas.filter(v => v.pagado === false)} 
     alCobrar={finalizarVenta}
@@ -192,7 +210,7 @@ function App() {
     alAgregarExtra={agregarExtraAFirebase} // <-- ESTA LÍNEA ES LA CLAVE
   />
 )}
-        {vista === "solventes" && <Solventes ventasFinalizadas={historialVentas.filter(v => v.pagado === true)} />}
+        {vista === "solventes" && <Solventes ventasFinalizadas={historialVentas.filter(v => v.pagado === true )} />}
         {vista === "dashboard" && <Dashboard alCambiarVista={navegarA} ventas={historialVentas} gastosFijos={GASTOS_FIJOS_DIARIOS} alCerrarCaja={cerrarCajaFirebase} />}
         {vista === "corte" && <CorteCaja alCambiarVista={navegarA} ventas={historialVentas} />}
       </div>
