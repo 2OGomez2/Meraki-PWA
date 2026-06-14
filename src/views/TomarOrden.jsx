@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, PlusCircle, Trash2, Zap, UtensilsCrossed } from 'lucide-react';
+import { Save, PlusCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { MENU_ESTRUCTURADO } from '../utils/menu';
 
-export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
+// Recibe "productosMenu" que viene directo desde App.jsx
+export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMenu = [] }) {
   const [carrito, setCarrito] = useState([]);
   const [cliente, setCliente] = useState("");
-  const [categoriaActual, setCategoriaActual] = useState("Bebidas");
+  const [busqueda, setBusqueda] = useState(""); 
   
   const carritoRef = useRef(carrito);
   useEffect(() => {
@@ -14,33 +14,13 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
   }, [carrito]);
 
   // --- 1. ELIMINAR ÍTEM INDIVIDUAL (VISTA PREVIA) ---
-    const eliminarDelCarrito = (id) => {
+  const eliminarDelCarrito = (id) => {
     setCarrito((prev) => {
-      const nuevoCarrito = prev.map(item => {
-        // Si es el ítem que buscamos y tiene más de 1, restamos 1
-        if (item.id === id && item.cantidad > 1) {
-          return { ...item, cantidad: item.cantidad - 1 };
-        }
-        // Si tiene 1 o menos (o no es el ítem), lo dejamos para el filter
-        return item;
-      }).filter(item => {
-        // Si el item es el que queremos borrar y su cantidad ya era 1, el filter lo saca
-        if (item.id === id && item.cantidad <= 1 && item.id === id) {
-          // Esta lógica es un poco redundante pero segura: 
-          // Si el ID coincide, pero ya no queremos restarle, el filter lo elimina.
-          // Pero para hacerlo más simple, usaremos esta lógica de abajo:
-          return false; 
-        }
-        return true;
-      });
-
-      // LÓGICA SIMPLIFICADA Y EFECTIVA:
       const carritoActualizado = prev.reduce((acc, item) => {
         if (item.id === id) {
           if (item.cantidad > 1) {
             acc.push({ ...item, cantidad: item.cantidad - 1 });
           }
-          // Si es 1, simplemente no lo agregamos al 'acc' (se elimina)
         } else {
           acc.push(item);
         }
@@ -83,12 +63,13 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
     });
   };
 
+  // --- 3. CONFIGURAR PRODUCTO (MODAL) ---
   const abrirConfiguracionProducto = (prod) => {
     let cantidadLocal = 1;
     let aderezosPorPlato = [{}]; 
     let notaLocal = "";
-    // Detectamos si es alitas basado en tu menu.js
-    const esAlitas = categoriaActual === "Alitas";
+    
+    const esAlitas = Array.isArray(prod.aderezosDisponibles) && prod.aderezosDisponibles.length > 0;
 
     const actualizarContenidoModal = () => {
       const inputCant = document.getElementById('swal-cant');
@@ -132,7 +113,7 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
         <div class="text-left font-sans">
           <div class="mb-4 bg-slate-900 text-white p-3 rounded-xl flex justify-between">
             <span class="font-black text-xs uppercase">${prod.nombre}</span>
-            <span class="font-black text-xs">$${prod.precioBase.toFixed(2)}</span>
+            <span class="font-black text-xs">$${(prod.precioUnitario || 0).toFixed(2)}</span>
           </div>
           <div class="mb-4">
             <label class="text-[10px] font-black uppercase text-slate-400">Cantidad</label>
@@ -165,33 +146,31 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
           }
         };
       },
-    // ... dentro de abrirConfiguracionProducto
       preConfirm: () => {
         const nt = document.getElementById('swal-nota').value;
         const inputCant = document.getElementById('swal-cant');
-        const valorCantidadReal = parseInt(inputCant.value) || 1; // Captura el valor real del input
+        const valorCantidadReal = parseInt(inputCant.value) || 1;
 
         if (esAlitas) {
           return aderezosPorPlato.map((ade, i) => {
             const total = Object.values(ade).reduce((a, b) => a + b, 0);
             const ex = Math.max(0, total - (prod.maxAderezosGratis || 0));
             return {
-              id: Date.now() + i + Math.random(),
+              id: `${Date.now()}-${i}-${Math.random()}`,
               nombre: `${prod.nombre} (P${i+1})`,
-              precioUnitario: prod.precioBase + (ex * 0.5),
-              cantidad: 1, // En alitas siempre es 1 por plato
+              precioUnitario: (prod.precioUnitario || 0) + (ex * 0.5),
+              cantidad: 1,
               aderezos: Object.entries(ade).filter(([_, c]) => c > 0).map(([n, c]) => `${n}x${c}`),
               nota: i === 0 ? nt : ""
             };
           });
         }
 
-        // SOLUCIÓN PARA PRODUCTOS NORMALES:
         return [{
-          id: Date.now(),
+          id: prod.id || Date.now(),
           nombre: prod.nombre,
-          precioUnitario: prod.precioBase,
-          cantidad: valorCantidadReal, // <--- Aquí usamos el valor real capturado
+          precioUnitario: prod.precioUnitario || 0,
+          cantidad: valorCantidadReal,
           nota: nt
         }];
       }
@@ -202,8 +181,8 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
     });
   };
     
-    const mostrarResumen = (car = carrito) => {
-    // 1. Validaciones preventivas
+  // --- 4. RESUMEN DE COMPRA ---
+  const mostrarResumen = (car = carrito) => {
     if (car.length === 0) {
       return Swal.fire({
         title: "Carrito Vacío",
@@ -254,29 +233,66 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
       cancelButtonColor: '#94a3b8',
       reverseButtons: true,
       didOpen: () => {
-        // Manejo de eliminación dentro del resumen
         Swal.getHtmlContainer().onclick = (e) => {
           const btn = e.target.closest('.del-btn');
           if (btn) {
-            eliminarDelCarrito(parseFloat(btn.dataset.id));
+            const idBuscar = isNaN(btn.dataset.id) ? btn.dataset.id : parseFloat(btn.dataset.id);
+            eliminarDelCarrito(idBuscar);
           }
         };
       }
     }).then((result) => { 
       if (result.isConfirmed) { 
-        // Ejecutamos la función que viene de App.jsx
         alGuardarOrden(cliente, car); 
-        // Limpiamos el carrito local para la siguiente orden
         setCarrito([]);
         setCliente("");
       } 
     });
   };
-  
+
+  // --- 🛠️ MAPEAR MENÚ CON PRECIO UNITARIO ---
+  const mapearMenuSimplificado = () => {
+    const categoriasValidas = [
+      "Bebidas", 
+      "Hamburguesas y Sandwich", 
+      "Papas, Dedos de queso y Rollitos", 
+      "Alitas"
+    ];
+
+    const contenedor = {
+      "Bebidas": [],
+      "Hamburguesas y Sandwich": [],
+      "Papas, Dedos de queso y Rollitos": [],
+      "Alitas": []
+    };
+
+    productosMenu.forEach(prod => {
+      const madre = prod.categoriaMadre;
+      if (contenedor[madre] !== undefined) {
+        contenedor[madre].push(prod);
+      }
+    });
+
+    return categoriasValidas.map(nombreCat => ({
+      categoria: nombreCat,
+      productos: contenedor[nombreCat]
+    }));
+  };
+
+  const menuEstructurado = mapearMenuSimplificado();
+
+  // --- FILTRADO POR BÚSQUEDA ---
+  const menuFiltrado = menuEstructurado.map(cat => {
+    const productosFiltrados = cat.productos.filter(p => 
+      p.nombre.toLowerCase().includes(busqueda.toLowerCase())
+    );
+    return { ...cat, productos: productosFiltrados };
+  }).filter(cat => cat.productos.length > 0);
 
   return (
     <div className="flex flex-col h-[88vh] bg-slate-50 p-2">
-      <div className="bg-white p-4 rounded-3xl shadow-sm mb-4 border flex items-center gap-3">
+      {/* 1. INPUT DE CLIENTE */}
+      <div className="bg-white p-4 rounded-3xl shadow-sm mb-3 border flex items-center gap-3">
         <input 
           type="text" placeholder="CLIENTE..." 
           className="flex-1 text-xl font-black border-none focus:ring-0 uppercase"
@@ -287,31 +303,54 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-44">
-        {MENU_ESTRUCTURADO.filter(c => c.categoria === categoriaActual).map(cat => (
-          <div key={cat.categoria} className="grid grid-cols-2 gap-3">
-            {cat.subcategorias.flatMap(s => s.productos).map(p => (
-              <button key={p.id} onClick={() => abrirConfiguracionProducto(p)}
-                className="bg-white p-4 rounded-[2rem] border shadow-sm flex flex-col items-center justify-center h-28 active:bg-blue-50">
-                <span className="font-bold text-[10px] text-center uppercase mb-1 leading-tight">{p.nombre}</span>
-                <span className="text-blue-600 font-black text-sm">${p.precioBase.toFixed(2)}</span>
-              </button>
-            ))}
+      {/* 2. BUSCADOR DIRECTO */}
+      <div className="bg-white p-2 rounded-2xl shadow-sm mb-4 border">
+        <input 
+          type="text" 
+          placeholder="🔍 BUSCAR PLATILLO O BEBIDA..." 
+          className="w-full text-sm font-bold p-2 border-none focus:ring-0 uppercase text-slate-700 tracking-wide"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+        />
+      </div>
+
+      {/* 3. GRID DIRECTO DE PRODUCTOS */}
+      <div className="flex-1 overflow-y-auto pb-44 px-1 space-y-6 no-scrollbar">
+        {menuFiltrado.length === 0 ? (
+          <div className="text-center py-10 text-slate-400 font-bold uppercase text-xs italic">
+            No se encontraron productos para tu búsqueda.
           </div>
-        ))}
+        ) : (
+          menuFiltrado.map(cat => (
+            <div key={cat.categoria} className="space-y-3">
+              <div className="text-[12px] font-black text-slate-900 uppercase tracking-widest pl-2 flex items-center gap-2">
+                <span className="bg-[#f4244c] text-white px-3 py-1 rounded-xl text-[10px] font-black shadow-sm">
+                  ⚡ {cat.categoria}
+                </span>
+                <div className="h-[2px] bg-slate-200 flex-1"></div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pl-2">
+                {cat.productos.map(p => (
+                  <button key={p.idFB || p.id} onClick={() => abrirConfiguracionProducto(p)}
+                    className="bg-white p-4 rounded-[2rem] border shadow-sm flex flex-col items-center justify-center h-28 active:bg-blue-50 transition-all hover:border-slate-300">
+                    <span className="font-bold text-[10px] text-center uppercase mb-1 leading-tight text-slate-800 tracking-tight">
+                      {p.nombre}
+                    </span>
+                    <span className="text-blue-600 font-black text-sm">
+                      ${(p.precioUnitario || 0).toFixed(2)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      <div className="fixed bottom-24 left-4 right-4 bg-slate-900 rounded-full p-2 flex justify-around overflow-x-auto">
-        {MENU_ESTRUCTURADO.map(c => (
-          <button key={c.categoria} onClick={() => setCategoriaActual(c.categoria)}
-            className={`px-4 py-2 rounded-full text-[9px] font-black uppercase whitespace-nowrap ${categoriaActual === c.categoria ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>
-            {c.categoria}
-          </button>
-        ))}
-      </div>
-
+      {/* 4. BOTÓN FLOTANTE */}
       <button onClick={() => mostrarResumen()}
-        className="fixed bottom-6 left-6 right-6 bg-blue-600 text-white h-16 rounded-2xl font-black shadow-xl flex justify-between items-center px-8 active:scale-95 transition-transform">
+        className="fixed bottom-6 left-6 right-6 bg-blue-600 text-white h-16 rounded-2xl font-black shadow-xl flex justify-between items-center px-8 active:scale-95 transition-transform z-40">
         <span className="flex items-center gap-2 uppercase tracking-tighter"><Save size={20}/> Revisar Pedido</span>
         <span className="bg-white/20 px-4 py-1 rounded-xl">{carrito.length}</span>
       </button>
