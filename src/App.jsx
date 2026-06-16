@@ -22,11 +22,8 @@ function App() {
   const [vista, setVista] = useState("tomar");
   const [ordenesPendientes, setOrdenesPendientes] = useState([]);
   const [historialVentas, setHistorialVentas] = useState([]);
-  
-  // 1. PASO NUEVO: Creamos el estado para almacenar los productos del menú de Firebase
   const [productosMenu, setProductosMenu] = useState([]);
 
-  // Función reutilizable para obtener la fecha local exacta YYYY-MM-DD sin desfases
   const obtenerFechaLocalStr = () => {
     const d = new Date();
     const offset = d.getTimezoneOffset() * 60000;
@@ -46,15 +43,12 @@ function App() {
       setHistorialVentas(data);
     });
 
-    // 2. PASO NUEVO: Escuchamos la colección "menu" en tiempo real desde Firestore
-    // Ordenamos por nombre para que te aparezcan alfabéticamente en la toma de orden
     const qM = query(collection(db, "menu"), orderBy("nombre", "asc"));
     const unsubM = onSnapshot(qM, (snap) => {
       const data = snap.docs.map(d => ({ ...d.data(), idFB: d.id }));
       setProductosMenu(data);
     });
 
-    // Agregamos unsubM a la limpieza del useEffect
     return () => { unsubP(); unsubH(); unsubM(); };
   }, []);
 
@@ -83,13 +77,12 @@ function App() {
     }
   };
 
-  // MODIFICACIÓN 1: Al pasar a caja se le estampa la fecha de creación de la cuenta
   const pasarACaja = async (orden) => {
     try {
       await addDoc(collection(db, "historial"), {
         ...orden,
         idOrden: orden.id,
-        fecha: obtenerFechaLocalStr(), // <-- AGREGADO: "2026-06-12"
+        fecha: obtenerFechaLocalStr(), 
         pagado: false,
         totalAcumulado: orden.total,
         conteoCobros: 0,
@@ -99,7 +92,6 @@ function App() {
     } catch (error) { console.error(error); }
   };
 
-  // MODIFICACIÓN 2: Al liquidar, aseguramos que mantenga o actualice la fecha string del cobro definitivo
   const finalizarVenta = async (ventaIdFB) => {
     try {
       const ventaActual = historialVentas.find(v => v.idFB === ventaIdFB);
@@ -108,7 +100,7 @@ function App() {
       
       await updateDoc(ventaRef, {
         pagado: true,
-        fecha: ventaActual.fecha || obtenerFechaLocalStr(), // Asegura que tenga el string de fecha
+        fecha: ventaActual.fecha || obtenerFechaLocalStr(), 
         totalAcumulado: totalReal,
         horaFinalizacion: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
@@ -116,7 +108,7 @@ function App() {
     } catch (error) { console.error(error); }
   };
 
-  // MODIFICACIÓN 3: Al dividir cuentas, el ticket hijo (Abono) se guarda con su fecha string nativa
+  // 🛠️ FUNCIÓN OPTIMIZADA: Procesa el pago parcial sin duplicaciones de constantes
   const realizarPagoParcial = async (ventaIdFB, itemsAPagar) => {
     try {
       const ventaActual = historialVentas.find(v => v.idFB === ventaIdFB);
@@ -124,12 +116,13 @@ function App() {
 
       const ventaRef = doc(db, "historial", ventaIdFB);
       const montoRealAbono = itemsAPagar.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
-      const fechaHoy = obtenerFechaLocalStr(); // <-- Obtenemos la fecha limpia
+      const fechaHoy = obtenerFechaLocalStr();
 
+      // A. Registramos el ticket del Abono Parcial de manera independiente
       await addDoc(collection(db, "historial"), {
         id: Date.now(),
         cliente: `${ventaActual.cliente} (ABONO)`,
-        fecha: fechaHoy, // <-- AGREGADO para el desglose del abono individual
+        fecha: fechaHoy, 
         items: itemsAPagar, 
         totalAcumulado: montoRealAbono, 
         pagado: true, 
@@ -138,17 +131,53 @@ function App() {
         idPadre: ventaIdFB
       });
 
-      const itemsRestantes = ventaActual.pagos[0].items.filter(item => 
-        !itemsAPagar.some(p => p.nombre === item.nombre)
-      );
-      const esUltimo = itemsRestantes.length === 0;
-      const nuevoTotalRestante = itemsRestantes.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
+      // B. DESGLOSAR ITEMS DE LA CUENTA PADRE A UNIDADES INDIVIDUALES "1x"
+      const itemsPadreDesglosados = [];
+      const itemsOriginalesRaw = ventaActual.pagos?.[0]?.items || [];
+      
+      itemsOriginalesRaw.forEach((item) => {
+        const cantidadCiclo = item.cantidad || 1;
+        for (let i = 0; i < cantidadCiclo; i++) {
+          itemsPadreDesglosados.push({
+            ...item,
+            cantidad: 1
+          });
+        }
+      });
 
+      // C. REMOVER ÚNICAMENTE LAS UNIDADES COBRADAS EN LA CAJA
+      let pendientesActualizados = [...itemsPadreDesglosados];
+      itemsAPagar.forEach((cobrado) => {
+        const indexARemover = pendientesActualizados.findIndex(p => p.nombre === cobrado.nombre);
+        if (indexARemover !== -1) {
+          pendientesActualizados.splice(indexARemover, 1);
+        }
+      });
+
+      // D. RE-AGRUPAR LOS ÍTEMS RESTANTES PARA GUARDARLOS COMPACTOS
+      const itemsAgrupadosFinal = [];
+      pendientesActualizados.forEach((item) => {
+        const existente = itemsAgrupadosFinal.find(x => x.nombre === item.nombre);
+        
+        if (existente) {
+          existente.cantidad += 1;
+        } else {
+          itemsAgrupadosFinal.push({ 
+            ...item, 
+            cantidad: 1 
+          });
+        }
+      });
+
+      const esUltimo = itemsAgrupadosFinal.length === 0;
+      const nuevoTotalRestante = itemsAgrupadosFinal.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
+
+      // E. Sincronizamos los cambios verdaderos al documento Padre en Firestore
       await updateDoc(ventaRef, {
-        "pagos.0.items": itemsRestantes,
+        "pagos.0.items": itemsAgrupadosFinal,
         totalAcumulado: nuevoTotalRestante,
         pagado: esUltimo,
-        fecha: ventaActual.fecha || fechaHoy, // Mantiene la fecha de la cuenta padre
+        fecha: ventaActual.fecha || fechaHoy, 
         conteoCobros: (ventaActual.conteoCobros || 0) + 1,
         horaFinalizacion: esUltimo ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null
       });
@@ -156,6 +185,7 @@ function App() {
       Swal.fire("¡Cobro Realizado!", `Ticket de $${montoRealAbono.toFixed(2)}`, "success");
     } catch (error) { 
       console.error("Error en cobro parcial:", error); 
+      Swal.fire("Error", "No se pudo procesar el cobro parcial", "error");
     }
   };
   
@@ -207,7 +237,6 @@ function App() {
       {vista !== "admin" && <NavBarSuperior />}
       <div className={vista === "admin" ? "" : "p-4 pb-24"}> 
       
-        {/* 3. PASO NUEVO: Le inyectamos los "productosMenu" del estado como una prop a TomarOrden */}
         {vista === "tomar" && (
           <TomarOrden 
             alCambiarVista={navegarA} 

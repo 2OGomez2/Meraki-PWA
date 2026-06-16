@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Lock, BarChart3, Edit3, ShieldAlert, ArrowLeft, ArrowRight, Trash2, Edit } from 'lucide-react';
 import { collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
@@ -80,7 +81,7 @@ export default function Administracion({ alCambiarVista }) {
           onClick={() => alCambiarVista("tomar")} 
           className="w-full mt-3 text-slate-400 bg-slate-50 hover:bg-slate-100 hover:text-slate-600 font-black py-3 rounded-xl text-[10px] uppercase tracking-widest text-center transition-all"
         >
-          ← Volver al Menú
+          &larr; Volver al Menú
         </button>
       </div>
     );
@@ -118,7 +119,7 @@ export default function Administracion({ alCambiarVista }) {
           onClick={() => alCambiarVista('tomar')}
           className="bg-slate-900 text-slate-400 hover:bg-rose-600 hover:text-white px-5 py-3 sm:py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center shadow-md transition-all flex items-center justify-center gap-2"
         >
-          ← Salir
+          &larr; Salir
         </button>
       </div>
       
@@ -180,8 +181,9 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
     return fechaFormateada === fechaFiltro;
   });
 
+  // CORREGIDO: Prioriza 'totalAcumulado' o 'montoPagado' sobre el 'total' base para incluir extras del momento
   const ingresos = ventasDia.reduce((acc, curr) => {
-    const dinero = curr.total || curr.totalAcumulado || 0;
+    const dinero = curr.totalAcumulado || curr.montoPagado || curr.total || 0;
     return acc + parseFloat(dinero);
   }, 0);
   
@@ -205,7 +207,9 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
       const fechaTexto = transformarIdAFechaTexto(v.id);
       if (fechaTexto && fechaTexto.startsWith(`${year}-${month}`)) {
         if (!registros[fechaTexto]) registros[fechaTexto] = { ingresos: 0, egresos: 0 };
-        registros[fechaTexto].ingresos += parseFloat(v.total || v.totalAcumulado || 0);
+        // CORREGIDO: Prioriza el total acumulado real con extras incluidos en el resumen mensual
+        const dineroVenta = v.totalAcumulado || v.montoPagado || v.total || 0;
+        registros[fechaTexto].ingresos += parseFloat(dineroVenta);
       }
     });
 
@@ -313,7 +317,7 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
                       className="hover:bg-rose-50/50 cursor-pointer transition-all"
                     >
                       <td className="py-2.5 text-blue-600 underline font-black">{r.fecha.split('-')[2]}/{r.fecha.split('-')[1]}</td>
-                      <td className="py-2.5 text-right text-green-600">${r.ingresos.toFixed(2)}</td>
+                      <td className="py-2.5 text-right text-green-600">${r.headingresos || r.ingresos.toFixed(2)}</td>
                       <td className="py-2.5 text-right text-rose-500">${r.egresos.toFixed(2)}</td>
                       <td className={`py-2.5 text-right font-black ${r.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>${r.resultado.toFixed(2)}</td>
                     </tr>

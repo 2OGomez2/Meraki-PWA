@@ -49,13 +49,18 @@ export default function Solventes({ ventasFinalizadas }) {
           ${todosLosCobros.map((cobro, index) => {
             const productosCobro = cobro.pagos?.[0]?.items || cobro.items || [];
             const subtotalCobro = productosCobro.reduce((sum, i) => sum + (i.precioUnitario * i.cantidad), 0);
+            
+            // Extraer la fecha del cobro (prioriza campos comunes)
+            const fechaDocumento = cobro.fechaCancelado || cobro.fecha || '---';
 
             return `
               <div style="margin-bottom: 12px; padding: 14px; border: 2px solid ${cobro.esPagoParcial ? '#e2e8f0' : '#bbf7d0'}; background: ${cobro.esPagoParcial ? '#f8fafc' : '#f0fdf4'}; border-radius: 1.25rem;">
                 
-                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 900; color: #475569; margin-bottom: 8px; text-transform: uppercase;">
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; font-weight: 900; color: #475569; margin-bottom: 8px; text-transform: uppercase;">
                   <span>${cobro.esPagoParcial ? `Cobro Parcial #${index + 1}` : 'Liquidación Final'}</span>
-                  <span style="color: #2563eb;">${cobro.horaFinalizacion || cobro.hora || '--:--'}</span>
+                  <span style="color: #2563eb; background-color: rgba(37, 99, 235, 0.08); padding: 2px 6px; border-radius: 6px;">
+                    📅 ${fechaDocumento} &nbsp; 🕒 ${cobro.horaFinalizacion || cobro.hora || '--:--'}
+                  </span>
                 </div>
 
                 <div style="margin-bottom: 6px;">
@@ -126,6 +131,9 @@ export default function Solventes({ ventasFinalizadas }) {
           }, 0);
 
           const nCobros = todosMisCobros.length;
+          
+          // Extraer fecha para la fila principal
+          const fechaPrincipal = venta.fechaCancelado || venta.fecha || '---';
 
           return (
             <div 
@@ -139,7 +147,10 @@ export default function Solventes({ ventasFinalizadas }) {
                 </div>
                 <div>
                   <h3 className="font-black text-slate-800 uppercase text-sm tracking-tight">{venta.cliente}</h3>
-                  <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold mt-0.5">
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-400 font-bold mt-0.5">
+                    <span className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-black text-[9px]">
+                      📅 {fechaPrincipal}
+                    </span>
                     <span className="flex items-center gap-0.5">
                       <Clock size={10}/> {venta.horaFinalizacion || "Finalizado"}
                     </span>

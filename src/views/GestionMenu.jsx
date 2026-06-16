@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 import { db } from '../firebaseConfig';
 import { collection, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 
+// CORREGIDO: Modificado a "Papas,Dedos de queso y Rollitos" (Estrictamente sin espacio)
 const CATEGORIAS_MADRES = [
   "Bebidas",
   "Hamburguesas y Sandwich",
@@ -15,6 +16,7 @@ export default function GestionMenu({ productos = [] }) {
   const [nombreInput, setNombreInput] = useState('');
   const [precioInput, setPrecioInput] = useState('');
   const [categoriaMadre, setCategoriaMadre] = useState('Bebidas');
+  const [aderezosGratisInput, setAderezosGratisInput] = useState('');
   const [busqueda, setBusqueda] = useState('');
   const [editandoId, setEditandoId] = useState(null);
 
@@ -30,29 +32,34 @@ export default function GestionMenu({ productos = [] }) {
       return Swal.fire('Error', 'Ingresa un precio válido.', 'error');
     }
 
+    // Si es Alitas, procesamos la cantidad, de lo contrario se guarda en 0
+    const esAlitasCat = categoriaMadre === "Alitas";
+    const aderezosGratisNum = esAlitasCat ? parseInt(aderezosGratisInput) || 0 : 0;
+
     try {
       if (editandoId) {
-        // CORREGIDO: Cambiado de 'productos' a 'menu'
         const productoRef = doc(db, 'menu', editandoId);
         await updateDoc(productoRef, {
           nombre: nombreInput.trim().toUpperCase(),
           precioUnitario: precioNum,
-          categoriaMadre: categoriaMadre
+          categoriaMadre: categoriaMadre,
+          aderezosGratis: aderezosGratisNum
         });
         setEditandoId(null);
         Swal.fire({ icon: 'success', title: '¡Producto Actualizado!', timer: 1500, showConfirmButton: false });
       } else {
-        // CORREGIDO: Cambiado de 'productos' a 'menu'
         await addDoc(collection(db, 'menu'), {
           nombre: nombreInput.trim().toUpperCase(),
           precioUnitario: precioNum,
-          categoriaMadre: categoriaMadre
+          categoriaMadre: categoriaMadre,
+          aderezosGratis: aderezosGratisNum
         });
         Swal.fire({ icon: 'success', title: '¡Producto Añadido!', timer: 1500, showConfirmButton: false });
       }
 
       setNombreInput('');
       setPrecioInput('');
+      setAderezosGratisInput('');
     } catch (error) {
       console.error("Error al procesar producto:", error);
       Swal.fire('Error', 'No se pudo guardar en la base de datos.', 'error');
@@ -65,6 +72,7 @@ export default function GestionMenu({ productos = [] }) {
     setNombreInput(prod.nombre || '');
     setPrecioInput(prod.precioUnitario ? prod.precioUnitario.toString() : '');
     setCategoriaMadre(prod.categoriaMadre || 'Bebidas');
+    setAderezosGratisInput(prod.aderezosGratis !== undefined ? prod.aderezosGratis.toString() : '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -74,6 +82,7 @@ export default function GestionMenu({ productos = [] }) {
     setNombreInput('');
     setPrecioInput('');
     setCategoriaMadre('Bebidas');
+    setAderezosGratisInput('');
   };
 
   // --- 4. ELIMINAR PRODUCTO ---
@@ -91,7 +100,6 @@ export default function GestionMenu({ productos = [] }) {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          // CORREGIDO: Cambiado de 'productos' a 'menu'
           await deleteDoc(doc(db, 'menu', id));
           Swal.fire('¡Eliminado!', `"${nombreProd}" ha sido removido del catálogo.`, 'success');
         } catch (error) {
@@ -157,6 +165,23 @@ export default function GestionMenu({ productos = [] }) {
             </div>
           </div>
 
+          {/* CAMPO DINÁMICO EXCLUSIVO PARA ALITAS */}
+          {categoriaMadre === "Alitas" && (
+            <div className="flex flex-col max-w-sm animation-fade-in">
+              <label className="text-[10px] font-black uppercase text-[#f4244c] mb-1">
+                ¿Cuántos aderezos incluye gratis este producto?
+              </label>
+              <input 
+                type="number" 
+                min="0"
+                value={aderezosGratisInput}
+                onChange={e => setAderezosGratisInput(e.target.value)}
+                placeholder="Ej. 1 para el de 6, 2 para el de 12" 
+                className="p-3 bg-rose-50/50 border border-rose-200 rounded-xl text-xs font-bold outline-none focus:border-[#f4244c] transition-all"
+              />
+            </div>
+          )}
+
           <div className="flex gap-2 justify-end pt-2">
             {editandoId && (
               <button 
@@ -217,7 +242,14 @@ export default function GestionMenu({ productos = [] }) {
               ) : (
                 productosFiltrados.map(p => (
                   <tr key={p.id} className="hover:bg-slate-50 transition-all">
-                    <td className="p-3 text-slate-400 uppercase text-[10px] tracking-wide">{p.categoriaMadre || 'Sin Categoría'}</td>
+                    <td className="p-3 text-slate-400 uppercase text-[10px] tracking-wide">
+                      {p.categoriaMadre || 'Sin Categoría'}
+                      {p.categoriaMadre === "Alitas" && p.aderezosGratis > 0 && (
+                        <span className="block text-[8px] text-emerald-600 font-black mt-0.5 uppercase tracking-tighter">
+                          ({p.aderezosGratis} Gratis)
+                        </span>
+                      )}
+                    </td>
                     <td className="p-3 uppercase text-slate-800 font-black tracking-tight">{p.nombre}</td>
                     <td className="p-3 text-right text-[#f4244c] font-black">${parseFloat(p.precioUnitario || 0).toFixed(2)}</td>
                     <td className="p-3">

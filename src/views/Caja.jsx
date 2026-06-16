@@ -4,6 +4,13 @@ import Swal from 'sweetalert2';
 
 export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarVista, alCobrarParcial }) {
   
+  // FUNCIÓN AUXILIAR: Obtiene la fecha de hoy formateada de forma local (AAAA-MM-DD)
+  const obtenerFechaLocalHoy = () => {
+    const hoyRaw = new Date();
+    const offset = hoyRaw.getTimezoneOffset() * 60000;
+    return new Date(hoyRaw.getTime() - offset).toISOString().split('T')[0];
+  };
+
   const abrirModalExtraLibre = (venta) => {
     Swal.fire({
       title: 'Nuevo Extra para ' + venta.cliente,
@@ -46,12 +53,12 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
       if (result.isConfirmed) {
         alCambiarVista("tomar");
       } else if (result.isDenied) {
-        abrirModalExtraLibre(venta);
+        abrirModalExtraLibre(venta); // Corregido: antes decía openModalExtraLibre
       }
     });
   };
 
-  // FUNCIÓN REUTILIZABLE: Despliega la calculadora de efectivo Meraki para cobros totales o parciales
+  // FUNCIÓN REUTILIZABLE: Despliega la calculadora de efectivo para cobros totales o parciales
   const procesarPagoEfectivo = (titulo, totalAPagar, callbackConfirmado) => {
     Swal.fire({
       title: titulo,
@@ -89,7 +96,7 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
       `,
       showCancelButton: true,
       confirmButtonText: '✓ CONFIRMAR COBRO',
-      confirmButtonColor: '#f4244c',
+      confirmButtonColor: '#16a34a',
       cancelButtonText: 'CANCELAR',
       customClass: {
         popup: 'rounded-[2rem]'
@@ -135,11 +142,16 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
   };
 
   const manejarCuentasAparte = (venta) => {
-    const itemsOriginales = venta.pagos?.[0]?.items || [];
-    
+    const itemsOriginales = venta.pagos?.[0]?.items || venta.items || venta.productos || [];
+
+    if (itemsOriginales.length === 0) {
+      return Swal.fire('Error', 'No se encontraron productos pendientes en la orden.', 'error');
+    }
+
     const itemsDesglosados = [];
     itemsOriginales.forEach((item) => {
-      for (let i = 0; i < item.cantidad; i++) {
+      const cantidadCiclo = item.cantidad || 1;
+      for (let i = 0; i < cantidadCiclo; i++) {
         itemsDesglosados.push({
           ...item,
           cantidad: 1,
@@ -183,11 +195,13 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
         const seleccionados = result.value;
         const montoTotalCobrar = seleccionados.reduce((acc, i) => acc + i.precioUnitario, 0);
         
-        // MODIFICACIÓN CRÍTICA: En lugar de cobrar directo, llama a la calculadora con el monto parcial
+        // CORRECCIÓN: Forzamos la fecha local exacta del cobro parcial
+        const fechaCanceladoString = obtenerFechaLocalHoy();
+
         procesarPagoEfectivo(
           `PAGO PARCIAL - ${venta.cliente}`,
           montoTotalCobrar,
-          () => alCobrarParcial(venta.idFB, seleccionados, montoTotalCobrar)
+          () => alCobrarParcial(venta.idFB, seleccionados, montoTotalCobrar, fechaCanceladoString)
         );
       }
     });
@@ -209,8 +223,8 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
       )}
 
       {ventas.map((venta) => {
-        const detallePendiente = venta.pagos?.[0]?.items || [];
-        const totalItemsFisicos = detallePendiente.reduce((acc, curr) => acc + curr.cantidad, 0);
+        const detallePendiente = venta.pagos?.[0]?.items || venta.items || venta.productos || [];
+        const totalItemsFisicos = detallePendiente.reduce((acc, curr) => acc + (curr.cantidad || 1), 0);
         
         return (
           <div key={venta.idFB} className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden mb-6">
@@ -237,10 +251,10 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
                 <div key={idx} className="flex flex-col border-b border-slate-50 pb-2 last:border-0">
                   <div className="flex justify-between items-start">
                     <span className="text-slate-700 font-bold uppercase text-sm">
-                      <span className="text-[#f4244c] mr-2">{item.cantidad}x</span> 
+                      <span className="text-[#f4244c] mr-2">{(item.cantidad || 1)}x</span> 
                       {item.nombre}
                     </span>
-                    <span className="font-black text-slate-900 text-sm">${(item.precioUnitario * item.cantidad).toFixed(2)}</span>
+                    <span className="font-black text-slate-900 text-sm">${((item.precioUnitario || 0) * (item.cantidad || 1)).toFixed(2)}</span>
                   </div>
 
                   <div className="ml-6 flex flex-col gap-1 mt-1">
@@ -285,7 +299,16 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
               )}
 
               <button 
-                onClick={() => procesarPagoEfectivo(`COBRAR CUENTA - ${venta.cliente}`, venta.totalAcumulado || 0, () => alCobrar(venta.idFB))}
+                onClick={() => {
+                  // CORRECCIÓN: Forzamos la fecha local exacta del cobro total completo de la cuenta
+                  const fechaCanceladoString = obtenerFechaLocalHoy();
+
+                  procesarPagoEfectivo(
+                    `COBRAR CUENTA - ${venta.cliente}`, 
+                    venta.totalAcumulado || 0, 
+                    () => alCobrar(venta.idFB, fechaCanceladoString)
+                  );
+                }}
                 className="col-span-2 bg-[#f4244c] hover:bg-[#d61b3f] text-white p-4 rounded-xl font-black text-sm shadow-lg shadow-[#f4244c]/20 flex items-center justify-center gap-2 active:scale-95 transition-all"
               >
                 <Wallet size={18} /> COBRAR TODO EL TOTAL
