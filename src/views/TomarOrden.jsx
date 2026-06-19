@@ -69,18 +69,16 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMe
     let aderezosPorPlato = [{}]; 
     let notaLocal = "";
     
-    // Inyección automática si es categoría Alitas para no depender al 100% de la configuración externa
     const esAlitasCat = prod.categoriaMadre === "Alitas" || prod.categoria === "Alitas";
     const aderezosDisponiblesBase = (Array.isArray(prod.aderezosDisponibles) && prod.aderezosDisponibles.length > 0)
       ? prod.aderezosDisponibles
       : (esAlitasCat ? ["BBQ", "BÚFALO", "RANCH", "ORANGE"] : []);
 
-    // Identificación automática de límites gratis basados en el nombre si no existen en BD
     let maxGratisBase = parseInt(prod.maxAderezosGratis || prod.aderezosGratis || 0);
     if (esAlitasCat && maxGratisBase === 0) {
       if (prod.nombre.includes("6")) maxGratisBase = 1;
       else if (prod.nombre.includes("12")) maxGratisBase = 2;
-      else maxGratisBase = 1; // Fallback por defecto
+      else maxGratisBase = 1; 
     }
 
     const esAlitas = aderezosDisponiblesBase.length > 0;
@@ -88,7 +86,6 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMe
     const actualizarContenidoModal = () => {
       const inputCant = document.getElementById('swal-cant');
       if (inputCant) {
-        // Si está completamente vacío en el DOM mantendremos un valor centinela (0) internamente
         cantidadLocal = inputCant.value === "" ? "" : (parseInt(inputCant.value) || 0);
         if (esAlitas) {
           const limitePlatos = cantidadLocal || 1;
@@ -154,13 +151,9 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMe
       showCancelButton: true,
       didOpen: () => {
         const p = Swal.getPopup();
-        
-        // Controlamos la actualización limpia en cada tipeo
         p.querySelector('#swal-cant').oninput = () => {
           notaLocal = document.getElementById('swal-nota').value;
-
           Swal.update({ html: actualizarContenidoModal() });
-
           const nuevoInput = Swal.getPopup().querySelector('#swal-cant');
           if (nuevoInput) {
             nuevoInput.focus();
@@ -248,24 +241,44 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMe
 
     Swal.fire({
       title: `REVISAR: ${cliente.toUpperCase()}`,
+      customClass: {
+        popup: '!w-[95vw] !max-w-xl !rounded-[2.5rem] !p-6' // Ventana más ancha, espaciosa y con mejores bordes
+      },
       html: `
-        <div class="text-left max-h-[350px] overflow-y-auto font-sans">
+        <div class="text-left max-h-[420px] overflow-y-auto font-sans px-1">
           ${car.map(i => `
-            <div class="flex justify-between items-center py-3 border-b">
-              <div>
-                <div class="font-black text-[11px] uppercase">${i.cantidad}x ${i.nombre}</div>
-                <div class="text-[9px] text-slate-400">${(i.aderezos && i.aderezos.length > 0) ? i.aderezos.join(', ') : ''}</div>
-                ${i.nota ? `<div class="text-[9px] text-blue-500 font-bold">Nota: ${i.nota}</div>` : ''}
+            <div class="flex justify-between items-start py-5 border-b border-slate-100 gap-4">
+              <div class="flex-1 min-w-0">
+                <div class="font-black !text-xl text-slate-900 uppercase tracking-tight leading-snug break-words">
+                  ${i.cantidad}x ${i.nombre}
+                </div>
+                
+                ${(i.aderezos && i.aderezos.length > 0) ? `
+                  <div class="!text-sm text-slate-500 font-bold mt-1 uppercase tracking-wide">
+                    ✨ ${i.aderezos.join(', ')}
+                  </div>
+                ` : ''}
+                
+                ${i.nota ? `
+                  <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-2xl !text-base text-blue-900 font-extrabold leading-normal shadow-sm">
+                    <span class="uppercase text-xs text-blue-600 font-black block mb-1 tracking-wider">📌 NOTA DE COCINA:</span>
+                    "${i.nota}"
+                  </div>
+                ` : ''}
               </div>
-              <div class="flex items-center gap-3">
-                <span class="font-black text-xs">$${(i.precioUnitario * i.cantidad).toFixed(2)}</span>
-                <button class="del-btn text-red-500 bg-red-50 p-2 rounded-lg" data-id="${i.id}">🗑️</button>
+              
+              <div class="flex items-center gap-3 shrink-0 pt-1">
+                <span class="font-black !text-base text-slate-900">$${(i.precioUnitario * i.cantidad).toFixed(2)}</span>
+                <button class="del-btn text-red-500 bg-red-50 hover:bg-red-100 p-3 rounded-2xl transition-colors active:scale-95" data-id="${i.id}">
+                  🗑️
+                </button>
               </div>
             </div>
           `).join('')}
-          <div class="mt-4 p-4 bg-slate-900 text-green-400 rounded-xl flex justify-between items-center">
-            <span class="font-black text-[10px]">TOTAL A COBRAR:</span>
-            <span class="text-xl font-black">$${total.toFixed(2)}</span>
+          
+          <div class="mt-6 p-5 bg-slate-950 text-green-400 rounded-3xl flex justify-between items-center shadow-lg">
+            <span class="font-black text-sm tracking-widest">TOTAL A COBRAR:</span>
+            <span class="text-3xl font-black tracking-tight">$${total.toFixed(2)}</span>
           </div>
         </div>
       `,
@@ -311,11 +324,9 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMe
 
     productosMenu.forEach(prod => {
       let madre = prod.categoriaMadre;
-      
       if (madre === "Papas, Dedos de queso y Rollitos") {
         madre = "Papas,Dedos de queso y Rollitos";
       }
-
       if (contenedor[madre] !== undefined) {
         contenedor[madre].push(prod);
       }
