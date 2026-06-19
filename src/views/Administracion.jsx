@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Lock, BarChart3, Edit3, ShieldAlert, ArrowLeft, ArrowRight, Trash2, Edit } from 'lucide-react';
 import { collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
@@ -124,7 +123,7 @@ export default function Administracion({ alCambiarVista }) {
       </div>
       
       {/* =========================================================
-          RENDERIZADO CONDICIONAL DE LAS PESTAÑAS INTERNAS
+          RENDERIZADO CONDICIONAL DE LAS PESTAÑAS INTERNES
          ========================================================= */}
       {pestanaActiva === 'dashboard' && <SubSeccionDashboard ventas={ventasTotales} gastos={gastosTotales} metas={metasDelDia} />}
       
@@ -176,6 +175,7 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
     return `${anio}-${mes}-${dia}`;
   };
 
+  // Se filtran los tickets de la base de datos usando la función nativa que hace match con la fecha seleccionada
   const ventasDia = ventas.filter(v => {
     const fechaFormateada = transformarIdAFechaTexto(v.id);
     return fechaFormateada === fechaFiltro;
@@ -288,6 +288,81 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
         >
           📊 Ver Resumen del Mes
         </button>
+
+        {/* 🛠️ NUEVA SECCIÓN DE TICKETS COMPONENTIZADA EN EL DASHBOARD */}
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
+              🎟️ Tickets Cerrados ({ventasDia.filter(v => v.pagado === true).length})
+            </h3>
+          </div>
+
+          {ventasDia.filter(v => v.pagado === true).length === 0 ? (
+            <div className="text-center py-6 text-slate-400 text-[11px] font-bold uppercase tracking-wider bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+              No hay tickets en este día
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-1 no-scrollbar">
+              {ventasDia
+                .filter(v => v.pagado === true)
+                .map((ticket) => {
+                  const montoFinal = ticket.totalAcumulado || ticket.montoPagado || ticket.total || 0;
+                  return (
+                    <div 
+                      key={ticket.id} 
+                      className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 shadow-sm transition-all"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-xs font-black text-slate-800 uppercase tracking-tight">
+                          {ticket.cliente}
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-black uppercase tracking-tight">
+                          🕒 {ticket.horaFinalizacion || ticket.hora || "Cerrado"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <span className="text-xs font-black text-emerald-600 block">
+                            ${parseFloat(montoFinal).toFixed(2)}
+                          </span>
+                          {ticket.conteoCobros > 0 && (
+                            <span className="text-[8px] bg-blue-50 text-blue-600 font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter">
+                              Abonado
+                            </span>
+                          )}
+                        </div>
+                        
+                        <button 
+                          onClick={() => {
+                            const totalItems = ticket.pagos?.[0]?.items || ticket.items || [];
+                            const detalleHTML = totalItems.map(i => `
+                              <div style="display: flex; justify-between; font-size: 13px; margin-bottom: 4px; font-weight: bold; color: #334155;">
+                                <span>• ${i.cantidad}x ${i.nombre}</span>
+                                <span style="margin-left: auto; color: #059669;">$${(i.precioUnitario * i.cantidad).toFixed(2)}</span>
+                              </div>
+                            `).join('');
+                            
+                            Swal.fire({
+                              title: `<span style="font-size: 15px; font-weight: 900; color: #0f172a;">DETALLE DE ${ticket.cliente}</span>`,
+                              html: `<div style="text-align: left; padding: 10px 5px;">${detalleHTML}</div>`,
+                              confirmButtonText: 'CERRAR',
+                              confirmButtonColor: '#f4244c',
+                              customClass: { popup: 'rounded-3xl' }
+                            });
+                          }}
+                          className="p-1.5 bg-white text-slate-400 hover:text-slate-600 rounded-xl border border-slate-200 transition-colors"
+                        >
+                          👁️
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+        
       </div>
 
       {/* Modal de Resumen Mensual */}
@@ -420,48 +495,45 @@ function SubSeccionListaGastos({ gastos }) {
           <input type="date" value={hastaFecha} onChange={e => setHastaFecha(e.target.value)} className="w-full p-2 border rounded-xl text-xs font-bold outline-none bg-white"/>
         </div>
         <div>
-          <label className="text-[9px] font-black uppercase text-slate-400 block mb-1">Buscar por concepto:</label>
-          <input type="text" placeholder="Ej. vino, servilletas..." value={busquedaConcepto} onChange={e => setBusquedaConcepto(e.target.value)} className="w-full p-2 border rounded-xl text-xs font-bold uppercase outline-none bg-white"/>
+          <label className="text-[9px] font-black uppercase text-slate-400 block mb-1">Buscar por Concepto:</label>
+          <input type="text" placeholder="EJ. GAS, LUZ, EMBUTIDOS" value={busquedaConcepto} onChange={e => setBusquedaConcepto(e.target.value)} className="w-full p-2 border rounded-xl text-xs font-bold outline-none bg-white uppercase placeholder:text-slate-300"/>
         </div>
       </div>
 
-      <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider">
-              <th className="p-3">FECHA</th>
-              <th className="p-3">CONCEPTO</th>
-              <th className="p-3 text-right">MONTO</th>
-              <th className="p-3 text-center">ACCIONES</th>
-            </tr>
-          </thead>
-          <tbody className="text-xs font-bold text-slate-700 divide-y divide-slate-100">
-            {gastosFiltrados.length === 0 ? (
-              <tr>
-                <td colSpan="4" className="text-center py-6 text-slate-400 italic">Ningún gasto coincide con los filtros especificados.</td>
-              </tr>
-            ) : (
-              gastosFiltrados.map(g => (
-                <tr key={g.id} className="hover:bg-slate-50 transition-all">
-                  <td className="p-3 font-mono text-[11px] whitespace-nowrap">{g.fecha}</td>
-                  <td className="p-3 uppercase tracking-wide text-slate-600">{g.concepto}</td>
-                  <td className="p-3 text-right text-rose-600 font-black">-${g.monto.toFixed(2)}</td>
-                  <td className="p-3">
-                    <div className="flex gap-1.5 justify-center">
-                      <button onClick={() => abrirEditarGasto(g)} className="p-1.5 text-slate-400 hover:text-blue-600 bg-slate-100 rounded-md transition-all"><Edit size={14} /></button>
-                      <button onClick={() => confirmarEliminarGasto(g.id)} className="p-1.5 text-slate-400 hover:text-rose-600 bg-slate-100 rounded-md transition-all"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="flex justify-between items-center px-4">
+        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Registros Encontrados: {gastosFiltrados.length}</span>
+        <span className="text-xs font-black text-slate-700">TOTAL PERÍODO: <span className="text-rose-600">${totalGastosPeriodo.toFixed(2)}</span></span>
       </div>
 
-      <div className="bg-slate-900 p-4 rounded-xl flex justify-between items-center text-white">
-        <span className="text-xs font-black uppercase tracking-wider text-slate-400">Total Gastos del Período:</span>
-        <span className="font-black text-lg text-[#f4244c]">${totalGastosPeriodo.toFixed(2)}</span>
+      <div className="overflow-x-auto no-scrollbar">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-100 text-[9px] font-black text-slate-400 uppercase tracking-wider">
+              <th className="py-3 px-2">Fecha</th>
+              <th className="py-3 px-2">Concepto</th>
+              <th className="py-3 px-2 text-right">Monto</th>
+              <th className="py-3 px-2 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="text-xs font-bold text-slate-700 divide-y divide-slate-50">
+            {gastosFiltrados.map(g => (
+              <tr key={g.id} className="hover:bg-slate-50/80 transition-all">
+                <td className="py-3 px-2 text-[11px] font-black text-slate-400">{g.fecha.split('-')[2]}/{g.fecha.split('-')[1]}</td>
+                <td className="py-3 px-2 uppercase tracking-tight max-w-[180px] truncate">{g.concepto}</td>
+                <td className="py-3 px-2 text-right text-rose-600 font-black">-${g.monto.toFixed(2)}</td>
+                <td className="py-3 px-2">
+                  <div className="flex justify-center gap-1.5">
+                    <button onClick={() => abrirEditarGasto(g)} className="p-1.5 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"><Edit size={13}/></button>
+                    <button onClick={() => confirmarEliminarGasto(g.id)} className="p-1.5 bg-rose-50 text-rose-400 hover:text-rose-600 rounded-lg transition-colors"><Trash2 size={13}/></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {gastosFiltrados.length === 0 && (
+          <div className="text-center py-8 text-slate-300 text-xs font-bold uppercase tracking-widest italic">No se hallaron egresos</div>
+        )}
       </div>
     </div>
   );

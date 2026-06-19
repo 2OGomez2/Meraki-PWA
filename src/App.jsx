@@ -108,7 +108,6 @@ function App() {
     } catch (error) { console.error(error); }
   };
 
-  // 🛠️ FUNCIÓN OPTIMIZADA: Procesa el pago parcial sin duplicaciones de constantes
   const realizarPagoParcial = async (ventaIdFB, itemsAPagar) => {
     try {
       const ventaActual = historialVentas.find(v => v.idFB === ventaIdFB);
@@ -118,7 +117,6 @@ function App() {
       const montoRealAbono = itemsAPagar.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
       const fechaHoy = obtenerFechaLocalStr();
 
-      // A. Registramos el ticket del Abono Parcial de manera independiente
       await addDoc(collection(db, "historial"), {
         id: Date.now(),
         cliente: `${ventaActual.cliente} (ABONO)`,
@@ -131,7 +129,6 @@ function App() {
         idPadre: ventaIdFB
       });
 
-      // B. DESGLOSAR ITEMS DE LA CUENTA PADRE A UNIDADES INDIVIDUALES "1x"
       const itemsPadreDesglosados = [];
       const itemsOriginalesRaw = ventaActual.pagos?.[0]?.items || [];
       
@@ -145,7 +142,6 @@ function App() {
         }
       });
 
-      // C. REMOVER ÚNICAMENTE LAS UNIDADES COBRADAS EN LA CAJA
       let pendientesActualizados = [...itemsPadreDesglosados];
       itemsAPagar.forEach((cobrado) => {
         const indexARemover = pendientesActualizados.findIndex(p => p.nombre === cobrado.nombre);
@@ -154,7 +150,6 @@ function App() {
         }
       });
 
-      // D. RE-AGRUPAR LOS ÍTEMS RESTANTES PARA GUARDARLOS COMPACTOS
       const itemsAgrupadosFinal = [];
       pendientesActualizados.forEach((item) => {
         const existente = itemsAgrupadosFinal.find(x => x.nombre === item.nombre);
@@ -172,7 +167,6 @@ function App() {
       const esUltimo = itemsAgrupadosFinal.length === 0;
       const nuevoTotalRestante = itemsAgrupadosFinal.reduce((acc, i) => acc + (i.precioUnitario * i.cantidad), 0);
 
-      // E. Sincronizamos los cambios verdaderos al documento Padre en Firestore
       await updateDoc(ventaRef, {
         "pagos.0.items": itemsAgrupadosFinal,
         totalAcumulado: nuevoTotalRestante,
@@ -211,24 +205,69 @@ function App() {
     }
   };
 
-  const NavBarSuperior = () => (
-    <div className="sticky top-0 z-50 bg-slate-900 text-white shadow-lg">
-      <div className="flex overflow-x-auto no-scrollbar items-center p-2 gap-2">
-        <NavButton icon={<LayoutGrid size={18}/>} label="Menú" activa={vista === "tomar"} onClick={() => navegarA("tomar")} />
-        <NavButton icon={<Clock size={18}/>} label="Cocina" activa={vista === "pendientes"} onClick={() => navegarA("pendientes")} />
-        <NavButton icon={<Wallet size={18}/>} label="Caja" activa={vista === "caja"} onClick={() => navegarA("caja")} />
-        <NavButton icon={<CheckCircle size={18}/>} label="Tickets" activa={vista === "solventes"} onClick={() => navegarA("solventes")} />
-        <NavButton icon={<TrendingUp size={18}/>} label="Gastos" activa={vista === "gastos"} onClick={() => navegarA("gastos")} />
-        <NavButton icon={<Calculator size={18}/>} label="Corte" activa={vista === "corte"} onClick={() => navegarA("corte")} />
-        <NavButton icon={<ShieldAlert size={18}/>} label="Admin" activa={vista === "admin"} onClick={() => navegarA("admin")} />
-      </div>
-    </div>
-  );
+  // --- NAVBAR SUPERIOR CON CONTADORES (CORREGIDA CON GRID FIJO) ---
+  const NavBarSuperior = () => {
+    const fechaHoy = obtenerFechaLocalStr();
+    const cuentasEnCaja = historialVentas.filter(v => v.pagado === false).length;
+    const ticketsDeHoy = historialVentas.filter(v => v.pagado === true && v.fecha === fechaHoy).length;
 
-  const NavButton = ({ icon, label, activa, onClick }) => (
-    <button onClick={onClick} className={`flex flex-col items-center min-w-[80px] p-2 rounded-xl transition-all ${activa ? 'bg-[#f4244c] text-white' : 'text-slate-400'}`}>
+    // Condición para evaluar la cantidad de botones visibles en pantalla
+    const mostrarTodos = vista === "corte" || vista === "gastos";
+
+    return (
+      <div className="sticky top-0 z-50 bg-slate-900 text-white shadow-lg w-full">
+        <div className={`grid ${mostrarTodos ? 'grid-cols-7' : 'grid-cols-5'} gap-1 p-2 items-center justify-items-center w-full max-w-full overflow-hidden`}>
+          
+          {mostrarTodos && (
+            <>
+              <NavButton icon={<LayoutGrid size={16}/>} label="Menú" activa={vista === "tomar"} onClick={() => navegarA("tomar")} />
+              <NavButton 
+                icon={<Clock size={16}/>} 
+                label="Cocina" 
+                activa={vista === "pendientes"} 
+                onClick={() => navegarA("pendientes")} 
+                badgeCount={ordenesPendientes.length} 
+              />
+            </>
+          )}
+          
+          <NavButton 
+            icon={<Wallet size={16}/>} 
+            label="Caja" 
+            activa={vista === "caja"} 
+            onClick={() => navegarA("caja")} 
+            badgeCount={cuentasEnCaja} 
+          />
+          
+          <NavButton 
+            icon={<CheckCircle size={16}/>} 
+            label="Tickets" 
+            activa={vista === "solventes"} 
+            onClick={() => navegarA("solventes")} 
+            badgeCount={ticketsDeHoy} 
+          />
+          
+          <NavButton icon={<TrendingUp size={16}/>} label="Gastos" activa={vista === "gastos"} onClick={() => navegarA("gastos")} />
+          <NavButton icon={<Calculator size={16}/>} label="Corte" activa={vista === "corte"} onClick={() => navegarA("corte")} />
+          <NavButton icon={<ShieldAlert size={16}/>} label="Admin" activa={vista === "admin"} onClick={() => navegarA("admin")} />
+        </div>
+      </div>
+    );
+  };
+
+  const NavButton = ({ icon, label, activa, onClick, badgeCount = 0 }) => (
+    <button 
+      onClick={onClick} 
+      className={`relative flex flex-col items-center justify-center w-full py-2 px-1 rounded-xl transition-all ${activa ? 'bg-[#f4244c] text-white font-black shadow-md' : 'text-slate-400'}`}
+    >
       {icon}
-      <span className="text-[9px] font-black uppercase mt-1 tracking-tighter">{label}</span>
+      <span className="text-[8px] font-bold uppercase mt-1 tracking-tighter text-center block truncate w-full">{label}</span>
+      
+      {badgeCount > 0 && (
+        <span className="absolute top-0.5 right-1 bg-[#f4244c] text-white text-[9px] font-black h-3.5 w-3.5 rounded-full flex items-center justify-center border border-slate-900 shadow-md">
+          {badgeCount}
+        </span>
+      )}
     </button>
   );
 
@@ -255,7 +294,14 @@ function App() {
             alAgregarExtra={agregarExtraAFirebase}
           />
         )}
-        {vista === "solventes" && <Solventes ventasFinalizadas={historialVentas.filter(v => v.pagado === true )} />}
+
+        {/* 🛠️ FILTRO CRUCIAL: Solo pasamos a Solventes las ventas pagadas cuya fecha coincida con HOY */}
+        {vista === "solventes" && (
+          <Solventes 
+            ventasFinalizadas={historialVentas.filter(v => v.pagado === true && v.fecha === obtenerFechaLocalStr())} 
+          />
+        )}
+        
         {vista === "gastos" && <GastosEncargada />}
         {vista === "corte" && <CorteCaja alCambiarVista={navegarA} ventas={historialVentas} />}
         {vista === "admin" && <Administracion alCambiarVista={navegarA} />}
