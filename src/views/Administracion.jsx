@@ -39,7 +39,6 @@ export default function Administracion({ alCambiarVista }) {
       setGastosTotales(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
     
-    // CORREGIDO: Cambiado de 'productos' a 'menu' para escuchar la colección activa
     const unsubsMenu = onSnapshot(collection(db, 'menu'), (snap) => {
       setProductosMenu(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
@@ -60,7 +59,7 @@ export default function Administracion({ alCambiarVista }) {
           <Lock size={28} />
         </div>
         <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight italic mb-2">ÁREA RESTRINGIDA</h2>
-        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Ingresa el PIN de Administrador</p>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Ingresa el PIN de Administrator</p>
         <form onSubmit={manejarAcceso} className="space-y-4">
           <input 
             type="password"
@@ -75,7 +74,6 @@ export default function Administracion({ alCambiarVista }) {
           </button>
         </form>
 
-        {/* BOTÓN DE ESCAPE INYECTADO AQUÍ */}
         <button 
           onClick={() => alCambiarVista("tomar")} 
           className="w-full mt-3 text-slate-400 bg-slate-50 hover:bg-slate-100 hover:text-slate-600 font-black py-3 rounded-xl text-[10px] uppercase tracking-widest text-center transition-all"
@@ -87,50 +85,49 @@ export default function Administracion({ alCambiarVista }) {
   }
 
   return (
-    <div className="space-y-6 p-2">
-      {/* Contenedor de Navegación de Administración */}
-      <div className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto items-stretch sm:items-center">
-        
-        {/* Barra de pestañas principal */}
-        <div className="flex-1 flex bg-slate-900 p-1.5 rounded-2xl justify-between gap-1 shadow-md">
-          <button 
-            onClick={() => setPestanaActiva('dashboard')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'dashboard' ? 'bg-[#f4244c] text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            <BarChart3 size={14} /> Dashboard
-          </button>
-          <button 
-            onClick={() => setPestanaActiva('menu')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'menu' ? 'bg-[#f4244c] text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            <Edit3 size={14} /> Menú
-          </button>
-          <button 
-            onClick={() => setPestanaActiva('listaGastos')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'listaGastos' ? 'bg-[#f4244c] text-white' : 'text-slate-400 hover:text-white'}`}
-          >
-            <ShieldAlert size={14} /> Auditoría Gastos
-          </button>
-        </div>
-
-        {/* 🚪 BOTÓN GLOBAL PARA SALIR DE LA ADMINISTRACIÓN */}
-        <button 
-          onClick={() => alCambiarVista('tomar')}
-          className="bg-slate-900 text-slate-400 hover:bg-rose-600 hover:text-white px-5 py-3 sm:py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-center shadow-md transition-all flex items-center justify-center gap-2"
-        >
-          &larr; Salir
-        </button>
-      </div>
+    // pb-28 evita que el contenido de los dashboards o tablas quede tapado por el menú estático
+    <div className="space-y-6 p-2 pb-28 relative">
       
       {/* =========================================================
-          RENDERIZADO CONDICIONAL DE LAS PESTAÑAS INTERNES
+          RENDERIZADO CONDICIONAL DE LAS PESTAÑAS INTERNAS
           ========================================================= */}
       {pestanaActiva === 'dashboard' && <SubSeccionDashboard ventas={ventasTotales} gastos={gastosTotales} metas={metasDelDia} />}
       
-      {/* CORREGIDO: Se inyectan los productos reales de la colección menu obtenidos por onSnapshot */}
       {pestanaActiva === 'menu' && <GestionMenu productos={productosMenu} />}
       
       {pestanaActiva === 'listaGastos' && <SubSeccionListaGastos gastos={gastosTotales} />}
+
+      {/* =========================================================
+          BARRA DE NAVEGACIÓN ESTÁTICA INFERIOR (BOTTOM NAV BAR)
+          ========================================================= */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 p-3 shadow-[0_-8px_24px_rgba(15,23,42,0.2)] border-t border-slate-800/60 backdrop-blur-md">
+        <div className="flex max-w-md mx-auto bg-slate-900 p-1.5 rounded-2xl justify-between gap-1">
+          <button 
+            onClick={() => setPestanaActiva('dashboard')}
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'dashboard' ? 'bg-[#f4244c] text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            <BarChart3 size={15} />
+            <span className="text-[9px] sm:text-[10px]">Dashboard</span>
+          </button>
+          
+          <button 
+            onClick={() => setPestanaActiva('menu')}
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'menu' ? 'bg-[#f4244c] text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            <Edit3 size={15} />
+            <span className="text-[9px] sm:text-[10px]">Menú</span>
+          </button>
+          
+          <button 
+            onClick={() => setPestanaActiva('listaGastos')}
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'listaGastos' ? 'bg-[#f4244c] text-white shadow-sm' : 'text-slate-400 hover:text-white'}`}
+          >
+            <ShieldAlert size={15} />
+            <span className="text-[9px] sm:text-[10px] text-center leading-none">Auditoría Gastos</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -175,13 +172,11 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
     return `${anio}-${mes}-${dia}`;
   };
 
-  // Se filtran los tickets de la base de datos usando la función nativa que hace match con la fecha seleccionada
   const ventasDia = ventas.filter(v => {
     const fechaFormateada = transformarIdAFechaTexto(v.id);
     return fechaFormateada === fechaFiltro;
   });
 
-  // CORREGIDO: Prioriza 'totalAcumulado' o 'montoPagado' sobre el 'total' base para incluir extras del momento
   const ingresos = ventasDia.reduce((acc, curr) => {
     const dinero = curr.totalAcumulado || curr.montoPagado || curr.total || 0;
     return acc + parseFloat(dinero);
@@ -207,7 +202,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
       const fechaTexto = transformarIdAFechaTexto(v.id);
       if (fechaTexto && fechaTexto.startsWith(`${year}-${month}`)) {
         if (!registros[fechaTexto]) registros[fechaTexto] = { ingresos: 0, egresos: 0 };
-        // CORREGIDO: Prioriza el total acumulado real con extras incluidos en el resumen mensual
         const dineroVenta = v.totalAcumulado || v.montoPagado || v.total || 0;
         registros[fechaTexto].ingresos += parseFloat(dineroVenta);
       }
@@ -234,7 +228,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
 
   return (
     <div className="max-w-md mx-auto bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-      {/* Selector de Fechas */}
       <div className="bg-slate-900 text-white p-5 flex justify-between items-center">
         <button onClick={() => cambiarDia(-1)} className="p-2 hover:bg-slate-800 rounded-lg"><ArrowLeft size={16}/></button>
         <span className="font-black text-xs uppercase tracking-wide text-center">{obtenerFechaFormateada(fechaFiltro)}</span>
@@ -242,7 +235,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
       </div>
 
       <div className="p-6 space-y-5">
-        {/* Input de Meta */}
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider">🎯 Meta del día:</span>
           <div className="relative max-w-[120px]">
@@ -257,7 +249,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
           </div>
         </div>
 
-        {/* Panel Numérico */}
         <div className="space-y-2">
           <div className="flex justify-between text-sm font-bold text-slate-600">
             <span>💰 INGRESOS (VENTAS):</span>
@@ -289,7 +280,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
           📊 Ver Resumen del Mes
         </button>
 
-        {/* 🛠️ NUEVA SECCIÓN DE TICKETS COMPONENTIZADA EN EL DASHBOARD */}
         <div className="mt-4 pt-4 border-t border-slate-100">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[11px] font-black uppercase text-slate-400 tracking-wider">
@@ -337,7 +327,7 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
                           onClick={() => {
                             const totalItems = ticket.pagos?.[0]?.items || ticket.items || [];
                             const detalleHTML = totalItems.map(i => `
-                              <div style="display: flex; justify-between; font-size: 13px; margin-bottom: 4px; font-weight: bold; color: #334155;">
+                              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; font-weight: bold; color: #334155;">
                                 <span>• ${i.cantidad}x ${i.nombre}</span>
                                 <span style="margin-left: auto; color: #059669;">$${(i.precioUnitario * i.cantidad).toFixed(2)}</span>
                               </div>
@@ -362,7 +352,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
             </div>
           )}
         </div>
-        
       </div>
 
       {/* Modal de Resumen Mensual */}
@@ -392,7 +381,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
                       className="hover:bg-rose-50/50 cursor-pointer transition-all"
                     >
                       <td className="py-2.5 text-blue-600 underline font-black">{r.fecha.split('-')[2]}/{r.fecha.split('-')[1]}</td>
-                      {/* CORREGIDO: Se eliminó r.headingresos para evitar errores de renderizado */}
                       <td className="py-2.5 text-right text-green-600">${r.ingresos.toFixed(2)}</td>
                       <td className="py-2.5 text-right text-rose-500">${r.egresos.toFixed(2)}</td>
                       <td className={`py-2.5 text-right font-black ${r.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>${r.resultado.toFixed(2)}</td>
