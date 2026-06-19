@@ -124,7 +124,7 @@ export default function Administracion({ alCambiarVista }) {
       
       {/* =========================================================
           RENDERIZADO CONDICIONAL DE LAS PESTAÑAS INTERNES
-         ========================================================= */}
+          ========================================================= */}
       {pestanaActiva === 'dashboard' && <SubSeccionDashboard ventas={ventasTotales} gastos={gastosTotales} metas={metasDelDia} />}
       
       {/* CORREGIDO: Se inyectan los productos reales de la colección menu obtenidos por onSnapshot */}
@@ -392,7 +392,8 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
                       className="hover:bg-rose-50/50 cursor-pointer transition-all"
                     >
                       <td className="py-2.5 text-blue-600 underline font-black">{r.fecha.split('-')[2]}/{r.fecha.split('-')[1]}</td>
-                      <td className="py-2.5 text-right text-green-600">${r.headingresos || r.ingresos.toFixed(2)}</td>
+                      {/* CORREGIDO: Se eliminó r.headingresos para evitar errores de renderizado */}
+                      <td className="py-2.5 text-right text-green-600">${r.ingresos.toFixed(2)}</td>
                       <td className="py-2.5 text-right text-rose-500">${r.egresos.toFixed(2)}</td>
                       <td className={`py-2.5 text-right font-black ${r.resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>${r.resultado.toFixed(2)}</td>
                     </tr>

@@ -137,6 +137,7 @@ function App() {
         for (let i = 0; i < cantidadCiclo; i++) {
           itemsPadreDesglosados.push({
             ...item,
+            text: item.nombre,
             cantidad: 1
           });
         }
@@ -205,34 +206,27 @@ function App() {
     }
   };
 
-  // --- NAVBAR SUPERIOR CON CONTADORES (CORREGIDA CON GRID FIJO) ---
+  // --- NAVBAR SUPERIOR CON CONTADORES ORIGINAL ---
   const NavBarSuperior = () => {
     const fechaHoy = obtenerFechaLocalStr();
     const cuentasEnCaja = historialVentas.filter(v => v.pagado === false).length;
     const ticketsDeHoy = historialVentas.filter(v => v.pagado === true && v.fecha === fechaHoy).length;
 
-    // Condición para evaluar la cantidad de botones visibles en pantalla
-    const mostrarTodos = vista === "corte" || vista === "gastos";
-
     return (
-      <div className="sticky top-0 z-50 bg-slate-900 text-white shadow-lg w-full">
-        <div className={`grid ${mostrarTodos ? 'grid-cols-7' : 'grid-cols-5'} gap-1 p-2 items-center justify-items-center w-full max-w-full overflow-hidden`}>
-          
-          {mostrarTodos && (
-            <>
-              <NavButton icon={<LayoutGrid size={16}/>} label="Menú" activa={vista === "tomar"} onClick={() => navegarA("tomar")} />
-              <NavButton 
-                icon={<Clock size={16}/>} 
-                label="Cocina" 
-                activa={vista === "pendientes"} 
-                onClick={() => navegarA("pendientes")} 
-                badgeCount={ordenesPendientes.length} 
-              />
-            </>
-          )}
+      <div className="sticky top-0 z-50 bg-slate-900 text-white shadow-lg">
+        <div className="flex overflow-x-auto no-scrollbar items-center p-2 gap-2">
+          <NavButton icon={<LayoutGrid size={18}/>} label="Menú" activa={vista === "tomar"} onClick={() => navegarA("tomar")} />
           
           <NavButton 
-            icon={<Wallet size={16}/>} 
+            icon={<Clock size={18}/>} 
+            label="Cocina" 
+            activa={vista === "pendientes"} 
+            onClick={() => navegarA("pendientes")} 
+            badgeCount={ordenesPendientes.length} 
+          />
+          
+          <NavButton 
+            icon={<Wallet size={18}/>} 
             label="Caja" 
             activa={vista === "caja"} 
             onClick={() => navegarA("caja")} 
@@ -240,16 +234,16 @@ function App() {
           />
           
           <NavButton 
-            icon={<CheckCircle size={16}/>} 
+            icon={<CheckCircle size={18}/>} 
             label="Tickets" 
             activa={vista === "solventes"} 
             onClick={() => navegarA("solventes")} 
             badgeCount={ticketsDeHoy} 
           />
           
-          <NavButton icon={<TrendingUp size={16}/>} label="Gastos" activa={vista === "gastos"} onClick={() => navegarA("gastos")} />
-          <NavButton icon={<Calculator size={16}/>} label="Corte" activa={vista === "corte"} onClick={() => navegarA("corte")} />
-          <NavButton icon={<ShieldAlert size={16}/>} label="Admin" activa={vista === "admin"} onClick={() => navegarA("admin")} />
+          <NavButton icon={<TrendingUp size={18}/>} label="Gastos" activa={vista === "gastos"} onClick={() => navegarA("gastos")} />
+          <NavButton icon={<Calculator size={18}/>} label="Corte" activa={vista === "corte"} onClick={() => navegarA("corte")} />
+          <NavButton icon={<ShieldAlert size={18}/>} label="Admin" activa={vista === "admin"} onClick={() => navegarA("admin")} />
         </div>
       </div>
     );
@@ -258,13 +252,13 @@ function App() {
   const NavButton = ({ icon, label, activa, onClick, badgeCount = 0 }) => (
     <button 
       onClick={onClick} 
-      className={`relative flex flex-col items-center justify-center w-full py-2 px-1 rounded-xl transition-all ${activa ? 'bg-[#f4244c] text-white font-black shadow-md' : 'text-slate-400'}`}
+      className={`relative flex flex-col items-center min-w-[80px] p-2 rounded-xl transition-all ${activa ? 'bg-[#f4244c] text-white' : 'text-slate-400'}`}
     >
       {icon}
-      <span className="text-[8px] font-bold uppercase mt-1 tracking-tighter text-center block truncate w-full">{label}</span>
+      <span className="text-[9px] font-black uppercase mt-1 tracking-tighter">{label}</span>
       
       {badgeCount > 0 && (
-        <span className="absolute top-0.5 right-1 bg-[#f4244c] text-white text-[9px] font-black h-3.5 w-3.5 rounded-full flex items-center justify-center border border-slate-900 shadow-md">
+        <span className="absolute top-1 right-2 bg-[#f4244c] text-white text-[10px] font-black h-4 w-4 rounded-full flex items-center justify-center border border-slate-900 shadow-md animate-pulse">
           {badgeCount}
         </span>
       )}
@@ -273,8 +267,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
-      {vista !== "admin" && <NavBarSuperior />}
-      <div className={vista === "admin" ? "" : "p-4 pb-24"}> 
+      {/* 🛠️ MODIFICACIÓN: La barra superior ahora renderiza siempre */}
+      <NavBarSuperior />
+      
+      {/* 🛠️ MODIFICACIÓN: Añadido padding inferior constante para evitar solapamientos con barras de abajo */}
+      <div className="p-4 pb-36"> 
       
         {vista === "tomar" && (
           <TomarOrden 
@@ -295,7 +292,6 @@ function App() {
           />
         )}
 
-        {/* 🛠️ FILTRO CRUCIAL: Solo pasamos a Solventes las ventas pagadas cuya fecha coincida con HOY */}
         {vista === "solventes" && (
           <Solventes 
             ventasFinalizadas={historialVentas.filter(v => v.pagado === true && v.fecha === obtenerFechaLocalStr())} 
