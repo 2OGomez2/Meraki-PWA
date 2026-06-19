@@ -160,6 +160,7 @@ function App() {
         } else {
           itemsAgrupadosFinal.push({ 
             ...item, 
+            shadowId: Date.now(),
             cantidad: 1 
           });
         }
@@ -206,11 +207,25 @@ function App() {
     }
   };
 
-  // --- NAVBAR SUPERIOR CON CONTADORES ORIGINAL ---
+  // --- NAVBAR SUPERIOR CON CONTADORES CORREGIDO ---
+  // --- NAVBAR SUPERIOR CON CONTADORES CORREGIDO ---
   const NavBarSuperior = () => {
     const fechaHoy = obtenerFechaLocalStr();
     const cuentasEnCaja = historialVentas.filter(v => v.pagado === false).length;
-    const ticketsDeHoy = historialVentas.filter(v => v.pagado === true && v.fecha === fechaHoy).length;
+    
+    // Filtramos las ventas pagadas de hoy
+    const ticketsDeHoyRaw = historialVentas.filter(v => v.pagado === true && v.fecha === fechaHoy);
+
+    // Agrupamos en un objeto hash por el nombre base del cliente para remover duplicados por cobros/abonos extra
+    const hashCuentasMadres = {};
+    ticketsDeHoyRaw.forEach(t => {
+      // Si el cliente tiene el sufijo " (ABONO)", se lo removemos para que unifique con el nombre de la cuenta madre original
+      const nombreLimpio = t.cliente ? t.cliente.replace(/\s*\(ABONO\)\s*/i, "").trim().toUpperCase() : t.idFB;
+      hashCuentasMadres[nombreLimpio] = true;
+    });
+
+    // Obtenemos la cantidad exacta de cuentas madres reales
+    const cantidadCuentasMadresReales = Object.keys(hashCuentasMadres).length;
 
     return (
       <div className="sticky top-0 z-50 bg-slate-900 text-white shadow-lg">
@@ -238,7 +253,7 @@ function App() {
             label="Tickets" 
             activa={vista === "solventes"} 
             onClick={() => navegarA("solventes")} 
-            badgeCount={ticketsDeHoy} 
+            badgeCount={cantidadCuentasMadresReales} 
           />
           
           <NavButton icon={<TrendingUp size={18}/>} label="Gastos" activa={vista === "gastos"} onClick={() => navegarA("gastos")} />
@@ -267,10 +282,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
-      {/* 🛠️ MODIFICACIÓN: La barra superior ahora renderiza siempre */}
       <NavBarSuperior />
       
-      {/* 🛠️ MODIFICACIÓN: Añadido padding inferior constante para evitar solapamientos con barras de abajo */}
       <div className="p-4 pb-36"> 
       
         {vista === "tomar" && (
