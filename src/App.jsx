@@ -207,28 +207,26 @@ function App() {
     }
   };
 
-  // --- NAVBAR SUPERIOR CON CONTADORES CORREGIDO ---
-  // --- NAVBAR SUPERIOR CON CONTADORES CORREGIDO ---
+  // --- NAVBAR SUPERIOR CON CONTADORES CORREGIDO Y REDISEÑADO ---
   const NavBarSuperior = () => {
     const fechaHoy = obtenerFechaLocalStr();
     const cuentasEnCaja = historialVentas.filter(v => v.pagado === false).length;
     
-    // Filtramos las ventas pagadas de hoy
     const ticketsDeHoyRaw = historialVentas.filter(v => v.pagado === true && v.fecha === fechaHoy);
 
-    // Agrupamos en un objeto hash por el nombre base del cliente para remover duplicados por cobros/abonos extra
     const hashCuentasMadres = {};
     ticketsDeHoyRaw.forEach(t => {
-      // Si el cliente tiene el sufijo " (ABONO)", se lo removemos para que unifique con el nombre de la cuenta madre original
       const nombreLimpio = t.cliente ? t.cliente.replace(/\s*\(ABONO\)\s*/i, "").trim().toUpperCase() : t.idFB;
       hashCuentasMadres[nombreLimpio] = true;
     });
 
-    // Obtenemos la cantidad exacta de cuentas madres reales
     const cantidadCuentasMadresReales = Object.keys(hashCuentasMadres).length;
 
     return (
-      <div className="sticky top-0 z-50 bg-slate-900 text-white shadow-lg">
+      <div 
+        className="sticky top-0 z-50 shadow-md border-b border-[#FFEBD9]" 
+        style={{ backgroundColor: '#FFEBD9', boxShadow: '0 4px 12px rgba(255, 180, 150, 0.25)' }}
+      >
         <div className="flex overflow-x-auto no-scrollbar items-center p-2 gap-2">
           <NavButton icon={<LayoutGrid size={18}/>} label="Menú" activa={vista === "tomar"} onClick={() => navegarA("tomar")} />
           
@@ -267,13 +265,22 @@ function App() {
   const NavButton = ({ icon, label, activa, onClick, badgeCount = 0 }) => (
     <button 
       onClick={onClick} 
-      className={`relative flex flex-col items-center min-w-[80px] p-2 rounded-xl transition-all ${activa ? 'bg-[#f4244c] text-white' : 'text-slate-400'}`}
+      className="relative flex flex-col items-center min-w-[80px] p-2 transition-all"
+      style={{
+        backgroundColor: activa ? '#FF4081' : 'transparent',
+        color: activa ? '#FFFFFF' : '#4A4A4A',
+        borderRadius: '50px',
+        fontFamily: '"Nunito", "Fredoka One", sans-serif'
+      }}
     >
-      {icon}
+      {React.cloneElement(icon, { color: activa ? '#FFFFFF' : '#4A4A4A' })}
       <span className="text-[9px] font-black uppercase mt-1 tracking-tighter">{label}</span>
       
       {badgeCount > 0 && (
-        <span className="absolute top-1 right-2 bg-[#f4244c] text-white text-[10px] font-black h-4 w-4 rounded-full flex items-center justify-center border border-slate-900 shadow-md animate-pulse">
+        <span 
+          className="absolute top-1 right-2 text-white text-[10px] font-black h-4 w-4 rounded-full flex items-center justify-center shadow-sm animate-pulse border"
+          style={{ backgroundColor: '#E6144A', borderColor: '#FFEBD9' }}
+        >
           {badgeCount}
         </span>
       )}
@@ -281,7 +288,10 @@ function App() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
+    <div 
+      className="min-h-screen font-sans" 
+      style={{ backgroundColor: '#FFF8F0', color: '#4A4A4A' }}
+    >
       <NavBarSuperior />
       
       <div className="p-4 pb-36"> 
