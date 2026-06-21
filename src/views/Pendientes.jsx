@@ -39,7 +39,7 @@ export default function Pendientes({ ordenes, alFinalizarPago }) {
           style={{ backgroundColor: '#FFEBD9', borderColor: '#FF4081' }}
         >
           <p className="font-black uppercase text-xs italic" style={{ color: '#4A4A4A' }}>
-            No hay pedidos pendientes. ¡A descansar, Inge!
+            No hay pedidos pendientes.
           </p>
         </div>
       )}

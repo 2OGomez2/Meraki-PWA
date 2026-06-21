@@ -152,7 +152,7 @@ export default function GestionMenu({ productos = [] }) {
             </div>
 
             <div className="flex flex-col">
-              <label className="text-[10px] font-black uppercase text-slate-400 mb-1">Categoría Madre</label>
+              <label className="text-[10px] font-black uppercase text-slate-400 mb-1">Categoría</label>
               <select 
                 value={categoriaMadre}
                 onChange={e => setCategoriaMadre(e.target.value)}

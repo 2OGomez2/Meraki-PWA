@@ -235,7 +235,7 @@ export default function Historial({ ventas, alCobrar, alAgregarExtra, alCambiarV
 
       {ventas.length === 0 && (
         <div className="text-center py-20 rounded-[2.5rem] border-2 border-dashed" style={{ backgroundColor: '#FFEBD9', borderColor: '#FF4081' }}>
-          <p className="font-bold italic uppercase text-xs" style={{ color: '#4A4A4A' }}>No hay clientes por pagar</p>
+          <p className="font-bold italic uppercase text-xs" style={{ color: '#4A4A4A' }}>No hay pagos pendientes</p>
         </div>
       )}
 
