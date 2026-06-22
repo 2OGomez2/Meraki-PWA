@@ -105,7 +105,8 @@ export default function Administracion({ alCambiarVista }) {
           ========================================================= */}
       {pestanaActiva === 'dashboard' && <SubSeccionDashboard ventas={ventasTotales} gastos={gastosTotales} metas={metasDelDia} />}
       
-      {pestanaActiva === 'menu' && <GestionMenu productos={productosMenu} />}
+      {/* Pasamos los productos y la base de datos de manera dinámica */}
+      {pestanaActiva === 'menu' && <GestionMenu productos={productosMenu} db={db} />}
       
       {pestanaActiva === 'listaGastos' && <SubSeccionListaGastos gastos={gastosTotales} />}
 
@@ -119,7 +120,7 @@ export default function Administracion({ alCambiarVista }) {
             className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'dashboard' ? 'text-white shadow-sm' : 'hover:bg-white/40'}`}
             style={{ 
               backgroundColor: pestanaActiva === 'dashboard' ? '#FF4081' : 'transparent',
-              color: pestanaActiva === 'dashboard' ? '#white' : '#4A4A4A'
+              color: pestanaActiva === 'dashboard' ? 'white' : '#4A4A4A'
             }}
           >
             <BarChart3 size={15} />
@@ -131,7 +132,7 @@ export default function Administracion({ alCambiarVista }) {
             className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'menu' ? 'text-white shadow-sm' : 'hover:bg-white/40'}`}
             style={{ 
               backgroundColor: pestanaActiva === 'menu' ? '#FF4081' : 'transparent',
-              color: pestanaActiva === 'menu' ? '#white' : '#4A4A4A'
+              color: pestanaActiva === 'menu' ? 'white' : '#4A4A4A'
             }}
           >
             <Edit3 size={15} />
@@ -143,7 +144,7 @@ export default function Administracion({ alCambiarVista }) {
             className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${pestanaActiva === 'listaGastos' ? 'text-white shadow-sm' : 'hover:bg-white/40'}`}
             style={{ 
               backgroundColor: pestanaActiva === 'listaGastos' ? '#FF4081' : 'transparent',
-              color: pestanaActiva === 'listaGastos' ? '#white' : '#4A4A4A'
+              color: pestanaActiva === 'listaGastos' ? 'white' : '#4A4A4A'
             }}
           >
             <ShieldAlert size={15} />
@@ -227,7 +228,6 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
       if (fechaTexto && fechaTexto.startsWith(`${year}-${month}`)) {
         if (!registros[fechaTexto]) registros[fechaTexto] = { ingresos: 0, egresos: 0 };
         const dineroVenta = v.totalAcumulado || v.montoPagado || v.total || 0;
-        registros[fechaTexto].ingress = (registros[fechaTexto].ingresos || 0);
         registros[fechaTexto].ingresos += parseFloat(dineroVenta);
       }
     });

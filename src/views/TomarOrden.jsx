@@ -233,7 +233,7 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMe
 
             return {
               id: `${prod.id || 'alita'}-${Date.now()}-${i}-${Math.random()}`,
-              nombre: `${prod.nombre}${sufijoSalsa}`.toUpperCase(),
+              nombre: prod.nombre.toUpperCase(),
               precioUnitario: (prod.precioUnitario || 0) + (ex * 0.5),
               amount: 1,
               cantidad: 1,
@@ -351,22 +351,28 @@ export default function TomarOrden({ alCambiarVista, alGuardarOrden, productosMe
     });
   };
 
-  // --- 🛠️ MAPEAR MENÚ CON PRECIO UNITARIO ---
+  // --- 🛠️ MAPEAR MENÚ DINÁMICO DESDE FIREBASE ---
   const mapearMenuSimplificado = () => {
+    // 1. Extraemos todas las categorías únicas presentes en tus productos reales de Firebase
     const categoriesValidas = [
-      "Bebidas", 
-      "Hamburguesas y Sandwich", 
-      "Papas,Dedos de queso y Rollitos", 
-      "Alitas"
+      ...new Set(
+        productosMenu.map(prod => {
+          let madre = prod.categoriaMadre;
+          if (madre === "Papas, Dedos de queso y Rollitos") {
+            return "Papas,Dedos de queso y Rollitos";
+          }
+          return madre;
+        }).filter(Boolean)
+      )
     ];
 
-    const contenedor = {
-      "Bebidas": [],
-      "Hamburguesas y Sandwich": [],
-      "Papas,Dedos de queso y Rollitos": [],
-      "Alitas": []
-    };
+    // 2. Inicializamos el contenedor de forma dinámica
+    const contenedor = {};
+    categoriesValidas.forEach(cat => {
+      contenedor[cat] = [];
+    });
 
+    // 3. Agrupamos los productos en su respectiva categoría madre
     productosMenu.forEach(prod => {
       let madre = prod.categoriaMadre;
       if (madre === "Papas, Dedos de queso y Rollitos") {
