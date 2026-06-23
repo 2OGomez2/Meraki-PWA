@@ -19,7 +19,7 @@ export default function Administracion({ alCambiarVista }) {
   // Validar credenciales
   const manejarAcceso = (e) => {
     e.preventDefault();
-    if (password === 'owen') {
+    if (password === 'lelianjc') {
       setAutenticado(true);
     } else {
       Swal.fire({
