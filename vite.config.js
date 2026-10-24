@@ -7,7 +7,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'img/logo.jpeg'],
+      includeAssets: ['favicon.ico', 'apple-icon.png', 'img/logo.jpeg'],
+      workbox: {
+        // Elimina automáticamente cachés creadas por versiones anteriores
+        cleanupOutdatedCaches: true,
+        // Obliga al nuevo Service Worker a tomar control sin esperar a reiniciar la pestaña
+        clientsClaim: true,
+        skipWaiting: true
+      },
       manifest: {
         name: 'Meraki Sistema de Ordenes',
         short_name: 'Meraki',
@@ -17,12 +24,12 @@ export default defineConfig({
         display: 'standalone',
         icons: [
           {
-            src: '/android-chrome-192x192.png',
+            src: '/icon1.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: '/android-chrome-512x512.png',
+            src: '/apple-icon.png',
             sizes: '512x512',
             type: 'image/png'
           }
