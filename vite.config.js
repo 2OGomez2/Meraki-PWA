@@ -9,9 +9,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-icon.png', 'img/logo.jpeg'],
       workbox: {
-        // Elimina automáticamente cachés creadas por versiones anteriores
         cleanupOutdatedCaches: true,
-        // Obliga al nuevo Service Worker a tomar control sin esperar a reiniciar la pestaña
         clientsClaim: true,
         skipWaiting: true
       },
@@ -40,9 +38,13 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          firebase: ['firebase/app', 'firebase/firestore']
+        manualChunks(id) {
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor';
+          }
+          if (id.includes('node_modules/firebase')) {
+            return 'firebase';
+          }
         }
       }
     }
