@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-icon.png', 'img/logo.jpeg'],
+      includeAssets: ['favicon.ico', 'apple-icon.png', 'web-app-manifest-192x192.png', 'web-app-manifest-512x512.png'],
       workbox: {
         cleanupOutdatedCaches: true,
         clientsClaim: true,
@@ -20,16 +20,20 @@ export default defineConfig({
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
-            src: '/icon1.png',
+            src: '/web-app-manifest-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           },
           {
-            src: '/apple-icon.png',
+            src: '/web-app-manifest-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any maskable'
           }
         ]
       }
