@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Cache de compilación local y entornos
+.vite/
+.cache/
+.env
