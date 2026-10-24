@@ -1,20 +1,26 @@
 import { initializeApp } from "firebase/app";
-// 1. Importamos Firestore (la base de datos)
-import { getFirestore } from "firebase/firestore";
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyByeBQodO8W0okOtwY50xZGa6AUqeY0BL4",
-  authDomain: "meraki-4bada.firebaseapp.com",
-  projectId: "meraki-4bada",
-  storageBucket: "meraki-4bada.firebasestorage.app",
-  messagingSenderId: "802213811455",
-  appId: "1:802213811455:web:ced85d6f1d98b1b74ba8ca",
-  measurementId: "G-WYNLHEPZ3R"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-// 2. Inicializamos la App
+// 1. Inicializamos la App
 const app = initializeApp(firebaseConfig);
 
-// 3. Exportamos 'db' para que App.jsx pueda leerla
-// Sin este 'export', la consola te seguirá tirando el error en rojo
-export const db = getFirestore(app);
+// 2. Inicializamos Firestore con caché local persistente y soporte para múltiples pestañas
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
