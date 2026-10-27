@@ -4,7 +4,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { db, firebaseConfig } from "../firebaseConfig";
 
 export const registrarUsuario = async (
@@ -66,5 +66,31 @@ export const registrarUsuario = async (
         console.warn("Aviso al limpiar app secundaria:", e);
       }
     }
+  }
+};
+// Actualizar nombre y correo en Firestore
+export const actualizarUsuario = async (uid, nombre, email, role) => {
+  try {
+    const userRef = doc(db, "users", uid);
+    await updateDoc(userRef, {
+      nombre: nombre.trim(),
+      email: email.trim().toLowerCase(),
+      role: role,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error al actualizar usuario:", error);
+    throw new Error("No se pudo actualizar la información del empleado.");
+  }
+};
+
+// Eliminar perfil de empleado en Firestore
+export const eliminarUsuario = async (uid) => {
+  try {
+    await deleteDoc(doc(db, "users", uid));
+    return { success: true };
+  } catch (error) {
+    console.error("Error al eliminar usuario:", error);
+    throw new Error("No se pudo eliminar el registro del empleado.");
   }
 };

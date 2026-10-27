@@ -306,6 +306,28 @@ function App() {
 
     const cantidadCuentasMadresReales = Object.keys(hashCuentasMadres).length;
 
+    // Función para confirmar el cierre de sesión
+    const confirmarCerrarSesion = () => {
+      Swal.fire({
+        title: "¿Cerrar Sesión?",
+        text: "¿Estás seguro de que quieres cerrar sesión?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#FF4081",
+        cancelButtonColor: "#4A4A4A",
+        confirmButtonText: "Sí, salir",
+        cancelButtonText: "Cancelar",
+        customClass: { popup: "rounded-[2rem]" },
+        didOpen: () => {
+          Swal.getPopup().style.backgroundColor = "#FFF8F0";
+        },
+      }).then((result) => {
+        if (result.isConfirmed) {
+          logout();
+        }
+      });
+    };
+
     return (
       <div
         className="sticky top-0 z-50 shadow-md border-b border-[#FFEBD9]"
@@ -369,11 +391,10 @@ function App() {
               />
             )}
           </div>
-
-          {/* Botón para Cerrar Sesión */}
+          {/* Botón para Cerrar Sesión con confirmacion */}
           <button
-            onClick={logout}
-            className="flex flex-col items-center min-w-[60px] p-2 text-red-500 hover:text-red-700 transition-all rounded-full hover:bg-red-50"
+            onClick={confirmarCerrarSesion}
+            className="flex flex-col items-center min-w-[60px] p-2 text-red-500 hover:text-red-700 transition-all rounded-full hover:bg-red-50 cursor-pointer"
             title="Cerrar sesión"
           >
             <LogOut size={18} />
