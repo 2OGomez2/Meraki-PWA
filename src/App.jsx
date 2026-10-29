@@ -29,13 +29,12 @@ import CorteCaja from "./views/CorteCaja";
 import Administracion from "./views/Administracion";
 import GastosEncargada from "./views/GastosEncargada";
 import Solventes from "./views/Solventes";
-import GestionMenu from "./views/GestionMenu";
 import { useAuth } from "./context/AuthContext";
 import { Login } from "./components/Login";
 import { LogOut } from "lucide-react"; // Icono opcional para cerrar sesión
 
 function App() {
-  const { currentUser, userProfile, isAdmin, logout } = useAuth();
+  const { currentUser, isAdmin, logout } = useAuth();
   const [vista, setVista] = useState("tomar");
   const [ordenesPendientes, setOrdenesPendientes] = useState([]);
   const [historialVentas, setHistorialVentas] = useState([]);

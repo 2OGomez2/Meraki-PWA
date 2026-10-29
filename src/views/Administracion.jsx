@@ -394,7 +394,7 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
           style={{ borderColor: "#FFF8F0" }}
         >
           <span className="text-[11px] font-black uppercase tracking-wider opacity-70">
-            🎯 Meta del día:
+            Meta del día:
           </span>
           <div className="relative max-w-[120px]">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 font-black text-sm opacity-50">
@@ -413,13 +413,13 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
 
         <div className="space-y-3">
           <div className="flex justify-between text-sm font-bold">
-            <span>💰 INGRESOS (VENTAS):</span>
+            <span>INGRESOS (VENTAS):</span>
             <span className="font-black" style={{ color: "#34C759" }}>
               ${ingresos.toFixed(2)}
             </span>
           </div>
           <div className="flex justify-between text-sm font-bold">
-            <span>💸 EGRESOS (GASTOS):</span>
+            <span>EGRESOS (GASTOS):</span>
             <span className="font-black" style={{ color: "#E6144A" }}>
               -${egresos.toFixed(2)}
             </span>
@@ -430,7 +430,7 @@ function SubSeccionDashboard({ ventas, gastos, metas }) {
             style={{ backgroundColor: "#FFEBD9" }}
           >
             <span className="text-xs font-black uppercase">
-              ✅ RESULTADO DEL DÍA:
+              RESULTADO DEL DÍA:
             </span>
             <span
               className="font-black text-lg"
